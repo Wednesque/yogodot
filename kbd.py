@@ -557,8 +557,17 @@ class Keyboard:
         self._send_keys(data, now)
         return True
 
+    def forget_keys(self):
+        """背光交回固件（模式不是 254）时调用：忘掉手里那帧灯。
+
+        否则熄屏 / 恢复会把「关背光之前」的最后一帧主题配色推回去 ——
+        逐键推流不管背光模式是不是 0，照亮。表现就是「关了背光，过一会儿又亮了」。"""
+        self._keys_last = self._keys_pending = None
+        self._saved = (self._saved[0], None)
+
     def stop_keys(self):
         self.send(C_ENDSYNC, 0, b"", 0, wait=False)
+        self.forget_keys()
 
     def status(self):
         return {"connected": self.connected(), "awake": self.awake,

@@ -331,7 +331,10 @@ def kb_api(path, d):
             cfg = kb.read_config()
             return {"ok": True, "awake": True, "cfg": list(cfg)}
         if path == "/kb/config":
-            cfg = kb.patch_config({int(k): int(v) for k, v in (d.get("bytes") or {}).items()})
+            patch = {int(k): int(v) for k, v in (d.get("bytes") or {}).items()}
+            cfg = kb.patch_config(patch)
+            if 2 in patch and patch[2] != 254:   # 背光交回固件：推流那帧灯作废
+                kb.forget_keys()
             return {"ok": True, "awake": True, "cfg": list(cfg)}
         if path == "/kb/matrix":
             kb.push_matrix(bytes(int(v) & 255 for v in (d.get("rgb") or [])))
