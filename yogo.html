@@ -1,0 +1,2709 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YOGO 控制台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ink:#0A0910;--panel:#14121C;--panel2:#1B1826;--line:#2E2840;--line2:#3B3552;
+    --dim:#7C7694;--dim2:#5A5570;--text:#EFECF7;--accent:#FF6A1F;--ok:#3ED47A;--bad:#FF5A5A;--info:#4AA8FF;
+    --ui:"Chakra Petch","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --mono:"JetBrains Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--text);font-family:var(--ui);font-size:14px;line-height:1.55}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 20px 48px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+    padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent)}
+  h1{margin:0;font-size:23px;font-weight:700}
+  .status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 8px currentColor;color:var(--bad);flex:none}
+  .dot.on{background:var(--ok);color:var(--ok)}
+  /* 电量：CSS 画的小电池。平时用暗色不抢注意力，低电和充电才亮起来 */
+  .batt{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;
+        color:var(--dim);cursor:default}
+  .batt .cell{position:relative;width:26px;height:13px;border:1.5px solid currentColor;
+              border-radius:4px;flex:none}
+  .batt .cell::after{content:"";position:absolute;left:100%;top:3px;width:2.5px;height:5px;
+                     background:currentColor;border-radius:0 2px 2px 0}
+  .batt .fill{position:absolute;left:1.5px;top:1.5px;bottom:1.5px;border-radius:2px;
+              background:currentColor;transition:width .5s ease}
+  .batt .bolt{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;
+              line-height:1;color:var(--bg);text-shadow:0 0 2px rgba(0,0,0,.5)}
+  .batt.low{color:var(--bad)}
+  .batt.mid{color:var(--accent)}
+  .batt.chg{color:var(--ok)}
+  .batt[hidden]{display:none}
+  .mode[hidden],#claudeOnly[hidden]{display:none}
+  button{font-family:var(--ui);cursor:pointer}
+  .btn{font-size:13px;font-weight:600;border-radius:6px;padding:8px 14px;border:1px solid var(--line);
+    background:var(--panel);color:var(--dim);transition:color .12s,border-color .12s}
+  .btn:hover{color:var(--text);border-color:var(--line2)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#170A02}
+  .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim2);margin:0 0 10px}
+
+  .modes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:22px 0 26px}
+  @media(max-width:760px){.modes{grid-template-columns:repeat(2,1fr)}}
+  .mode{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 12px;
+    display:flex;flex-direction:column;gap:4px;align-items:flex-start;transition:border-color .13s,background .13s}
+  .mode:hover{border-color:var(--line2)}
+  .mode[aria-pressed=true]{border-color:var(--accent);background:#FF6A1F14}
+  .mode b{font-size:14.5px;font-weight:600;color:var(--text)}
+  .mode[aria-pressed=true] b{color:var(--accent)}
+  .mode span{font-size:11.5px;color:var(--dim2);line-height:1.4;text-align:left}
+
+  .cols{display:grid;grid-template-columns:270px minmax(0,1fr);gap:24px;align-items:start}
+  @media(max-width:820px){.cols{grid-template-columns:1fr}}
+  .bezel{background:#050409;border:1px solid #000;border-radius:10px;padding:13px;
+    box-shadow:inset 0 1px 0 #ffffff0d,inset 0 0 40px #00000099}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .px{aspect-ratio:1;border-radius:5px;background:#100E18;box-shadow:inset 0 0 0 1px #ffffff08}
+  .kbprev{margin-top:12px;display:grid;grid-template-columns:repeat(16,1fr);gap:2px}
+  .kbprev i{aspect-ratio:1;border-radius:2px;background:#0C0A12;display:block}
+  .kbprev i.gap{background:transparent}
+  .metric{font-family:var(--mono);font-size:11.5px;color:var(--dim2);margin-top:9px}
+  .pane{display:none}
+  .pane.on{display:block}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:8px 6px;color:var(--dim);
+    font-size:12.5px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .12s,color .12s}
+  .chip:hover{border-color:var(--line2);color:var(--text)}
+  .chip[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:#FF6A1F14}
+  .thumb{display:grid;grid-template-columns:repeat(6,1fr);gap:1.5px;width:46px}
+  .thumb i{aspect-ratio:1;border-radius:1.5px}
+  .swatch{width:46px;height:9px;border-radius:4px}
+  .galgrp{border-top:1px solid var(--line);padding:11px 0 4px}
+  .galgrp>summary{cursor:pointer;list-style:none;font-family:var(--mono);font-size:11px;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--dim2);display:flex;align-items:center;gap:7px}
+  .galgrp>summary::-webkit-details-marker{display:none}
+  .galgrp>summary::before{content:"▸";font-size:10px;transition:transform .15s;color:var(--accent)}
+  .galgrp[open]>summary::before{transform:rotate(90deg)}
+  .galgrp>summary:hover{color:var(--text)}
+  .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .big{font-family:var(--mono);font-size:36px;font-variant-numeric:tabular-nums}
+  .phase{font-size:11.5px;color:var(--dim2);font-family:var(--mono);letter-spacing:.13em;text-transform:uppercase}
+  .note{color:var(--dim2);font-size:12px;border-left:2px solid var(--line);padding-left:11px;margin-top:14px}
+  .note b{color:var(--dim)}
+  .agent{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 17px}
+  .agent .st{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600}
+  .agent .meta{font-family:var(--mono);font-size:11.5px;color:var(--dim2);margin-top:7px;word-break:break-all}
+  .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    border:1px solid currentColor;border-radius:20px;padding:2px 9px}
+  select,input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--text);
+    font-family:var(--mono);font-size:12px;border-radius:6px;padding:6px 9px}
+  code{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">ATK YOGO 75 PRO</div>
+      <h1>控制台</h1>
+    </div>
+    <div class="row">
+      <div class="status"><span class="dot" id="dot"></span><span id="stat">未连接</span></div>
+      <div class="batt" id="batt" hidden title="键盘电量">
+        <span class="cell"><span class="fill" id="battFill"></span>
+              <span class="bolt" id="battBolt" hidden>&#9889;</span></span>
+        <span id="battTxt">—</span>
+      </div>
+      <button class="btn primary" id="conn">连接键盘</button>
+    </div>
+  </header>
+
+  <div class="modes" id="modes"></div>
+
+  <div class="cols">
+    <aside>
+      <p class="label">实时预览</p>
+      <div class="bezel">
+        <div class="grid" id="prev"></div>
+        <div class="kbprev" id="kbprev" title="键盘背光（6×16 键位）"></div>
+      </div>
+      <div class="metric" id="metric">—</div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+        <label class="row" style="gap:9px">
+          <span style="color:var(--dim2);font-size:12.5px;width:52px">点阵屏</span>
+          <input type="range" id="dotBr" min="5" max="100" step="5" style="flex:1;accent-color:var(--accent)">
+          <span class="metric" id="dotBrV" style="width:38px;margin:0"></span>
+        </label>
+        <label class="row" style="gap:9px">
+          <span style="color:var(--dim2);font-size:12.5px;width:52px">键盘灯</span>
+          <input type="range" id="kbBr" min="5" max="100" step="5" style="flex:1;accent-color:var(--accent)">
+          <span class="metric" id="kbBrV" style="width:38px;margin:0"></span>
+        </label>
+      </div>
+      <details style="margin-top:14px">
+        <summary style="color:var(--dim2);font-size:12.5px;cursor:pointer">键盘灯白平衡</summary>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:9px">
+          <label class="row" style="gap:9px"><span class="metric" style="width:16px;margin:0;color:#ff5a5a">R</span>
+            <input type="range" id="gR" min="10" max="100" step="2" style="flex:1;accent-color:#ff5a5a">
+            <span class="metric" id="gRv" style="width:34px;margin:0"></span></label>
+          <label class="row" style="gap:9px"><span class="metric" style="width:16px;margin:0;color:#3ed47a">G</span>
+            <input type="range" id="gG" min="10" max="100" step="2" style="flex:1;accent-color:#3ed47a">
+            <span class="metric" id="gGv" style="width:34px;margin:0"></span></label>
+          <label class="row" style="gap:9px"><span class="metric" style="width:16px;margin:0;color:#4aa8ff">B</span>
+            <input type="range" id="gB" min="10" max="100" step="2" style="flex:1;accent-color:#4aa8ff">
+            <span class="metric" id="gBv" style="width:34px;margin:0"></span></label>
+          <label class="row" style="gap:9px;margin-top:4px">
+            <span class="metric" style="width:16px;margin:0;color:var(--ok)">亮</span>
+            <input type="range" id="gEq" min="255" max="1645" step="10" style="flex:1;accent-color:var(--ok)">
+            <span class="metric" id="gEqv" style="width:44px;margin:0"></span></label>
+          <div style="color:var(--dim2);font-size:11.5px;line-height:1.45">
+            亮 = 亮度上限，<b>只压不提、绝不混白</b>（混白会让红发粉、橙发白）。<br>
+            <b>最左 255</b> = 七色完全等亮，色相全准，但整体偏暗。<br>
+            <b>最右 1645</b> = 各色跑满最亮，但蓝比红亮 6.5 倍。中间连续过渡。
+          </div>
+          <label class="row" style="gap:9px;margin-top:4px">
+            <span class="metric" style="width:16px;margin:0;color:#ffb03a">暖</span>
+            <input type="range" id="gC" min="30" max="100" step="5" style="flex:1;accent-color:#ffb03a">
+            <span class="metric" id="gCv" style="width:44px;margin:0"></span></label>
+          <div style="color:var(--dim2);font-size:11.5px;line-height:1.45">
+            暖 = 校正强度。<b>100 = 黄最准但最暗</b>；往左拉暖色变亮，代价是黄逐渐偏绿。
+            红是这块键盘最弱的通道（红1:绿4:蓝14），橙黄的 R 已顶满，只能这么换。
+          </div>
+          <label class="row" style="gap:9px;margin-top:4px">
+            <span class="metric" style="width:16px;margin:0;color:var(--accent)">S</span>
+            <input type="range" id="gS" min="100" max="260" step="10" style="flex:1;accent-color:var(--accent)">
+            <span class="metric" id="gSv" style="width:34px;margin:0"></span></label>
+          <div style="color:var(--dim2);font-size:11.5px;line-height:1.45">
+            S = 饱和度校正。LED 是发光体，低饱和色三通道一起亮就是白 ——
+            官方预设色板 15 个色全是最大通道 255、最小通道 ≤ 50 的高饱和色。
+          </div>
+          <div class="row" style="margin-top:2px">
+            <button class="btn" id="calG" style="padding:5px 10px;font-size:12px">扫描校准 G</button>
+            <button class="btn" id="calB" style="padding:5px 10px;font-size:12px">扫描校准 B</button>
+            <button class="btn" id="gReset" style="padding:5px 10px;font-size:12px">复位</button>
+          </div>
+          <div style="color:var(--dim2);font-size:11.5px;line-height:1.45">
+            扫描校准：整块铺纯黄（或纯青），但<b>每一列用不同的增益</b>。
+            看顶排哪个键的颜色最正，在下面选它 —— 我按那一列的增益写回去。
+          </div>
+          <div class="row" style="gap:6px;flex-wrap:wrap" id="calPick" hidden></div>
+          <div class="row" style="margin-top:2px">
+            <button class="btn" id="gTest" style="padding:5px 10px;font-size:12px">铺纯黄</button>
+          </div>
+          <label class="row" style="gap:6px;margin-top:2px"><input type="checkbox" id="gDot">
+            <span style="color:var(--dim2);font-size:11.5px">点阵屏也套用（默认关，它本来就准）</span></label>
+          <div style="color:var(--dim2);font-size:11.5px;line-height:1.45">
+            拖到「铺纯黄」看着是<b>正黄</b>为止 —— 偏绿就继续压 G，偏橙就把 G 拉回来。
+          </div>
+        </div>
+      </details>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="kbOff">熄灭键盘灯</button>
+        <span style="color:var(--dim2);font-size:12px">只留点阵屏</span>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <span style="color:var(--dim2);font-size:12.5px">键盘休眠</span>
+        <select id="sleepSel">
+          <option value="3">3 分钟（原厂）</option>
+          <option value="15">15 分钟</option>
+          <option value="30">30 分钟</option>
+          <option value="60">60 分钟</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:18px">
+        <b style="color:var(--fg);font-size:12.5px">Claude 模式</b>
+        <button class="btn" id="claudeOn">关</button>
+        <span style="color:var(--dim2);font-size:12px">开了才有顶部胶囊、Vibe 模式和额度显示</span>
+      </div>
+      <div id="claudeOnly" hidden>
+      <div class="row" style="margin-top:16px;font-size:12.5px;color:var(--dim)">
+        <b style="color:var(--fg)">顶部胶囊</b>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--dim2);font-size:12.5px;width:52px">皮肤</span>
+        <select id="capSkin"><option value="">跟随键盘主题</option></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--dim2);font-size:12.5px;width:52px">动画</span>
+        <select id="capAnim"></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--dim2);font-size:12.5px;width:52px">宠物</span>
+        <select id="capPet"></select>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--dim2);font-size:12.5px;width:52px">停留</span>
+        <select id="capHold"></select>
+        <span style="color:var(--dim2);font-size:12px">完全展开后起算 · 鼠标放上去就不收</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--dim2);font-size:12.5px;width:52px">点阵宠物</span>
+        <select id="dotPet">
+          <option value="blob">团子</option>
+          <option value="shark">鲨鱼</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <input id="tokBox" placeholder="粘贴 claude setup-token 给的那串"
+               style="flex:1;min-width:0;background:#141019;border:1px solid var(--line);
+                      color:var(--fg);border-radius:8px;padding:6px 9px;font-size:12px">
+        <button class="btn" id="tokSave">存</button>
+      </div>
+      <div class="note" style="margin-top:8px" id="tokNote">
+        存了这串之后，额度直接读账号（含 Fable 的周额度），不用再等 statusLine 上报。
+        token 只写在本机 <code>.token</code> 里。
+      </div>
+      </div><!-- /claudeOnly -->
+
+      <div class="note" style="margin-top:14px">
+        点阵屏和背光都走 <b>RAM 推流</b>，不写 flash，随便刷。代价是必须这页开着 ——
+        键盘自己不存这些内容，关机即丢，重连时这页会自动补推。<br>
+        背光亮度已拉满（90）—— 上灯位本来就偏暗。<br>
+        休眠调长了状态灯才等得到你回来，代价是耗电 —— 15 分钟是我建议的平衡点。
+      </div>
+    </aside>
+
+    <main>
+      <!-- 启动 -->
+      <section class="pane" data-pane="startup">
+        <p class="label">启动模式</p>
+        <p style="color:var(--dim);margin-top:0">电脑启动后检测日期：<b>跨天就自动换下一个主题</b>，并放 12 秒该主题的入场动画，
+          之后回到上一个常驻模式。同一天内重开不会重复跳。</p>
+        <div class="row" style="margin:14px 0">
+          <span style="color:var(--dim2);font-size:12.5px">今天的主题：</span>
+          <span class="pill" style="color:var(--accent)" id="todayAnim">—</span>
+          <button class="btn" id="playStartup">立刻重放入场</button>
+        </div>
+        <p class="label" style="margin-top:22px">动画库</p>
+        <div class="chips" id="anims"></div>
+        <div class="row" style="margin-top:14px">
+          <span style="color:var(--dim2);font-size:12.5px">帧率</span>
+          <select id="fpsSel">
+            <option value="30">流畅 30fps</option>
+            <option value="15" selected>均衡 15fps</option>
+            <option value="6">省电 6fps</option>
+          </select>
+          <span style="color:var(--dim2);font-size:12px">刷新率不影响灯珠寿命，但影响电池和 2.4G 占用</span>
+        </div>
+      </section>
+
+      <!-- 专注 -->
+      <section class="pane" data-pane="focus">
+        <p class="label">专注模式</p>
+        <p style="color:var(--dim);margin-top:0">背光全灭、点阵屏全黑。桌面上一个会动的东西都没有。</p>
+        <div class="agent" style="margin-top:16px">
+          <div class="st"><span class="dot" id="focusDot"></span><span id="focusTxt">未启用</span></div>
+          <div class="meta">退出专注模式会恢复你上一个主题。</div>
+        </div>
+      </section>
+
+      <!-- 主题 -->
+      <section class="pane" data-pane="theme">
+        <p class="label">主题模式</p>
+        <p style="color:var(--dim);margin-top:0">主题 = 背光配色 + 点阵图案，成套切换。</p>
+        <div class="row" style="margin:13px 0 4px">
+          <span style="color:var(--dim2);font-size:12.5px">键盘灯</span>
+          <select id="fwSel"></select>
+          <span style="color:var(--dim2);font-size:12px" id="fwHint"></span>
+        </div>
+        <div class="row" style="margin:10px 0 4px">
+          <button class="btn" id="dynBtn">静态</button>
+          <span style="color:var(--dim2);font-size:12px" id="dynHint">点阵屏和键盘都定格，最省电</span>
+        </div>
+        <div class="chips" id="themes" style="margin-top:14px"></div>
+        <p class="label" style="margin-top:24px">单独点阵图 · 屏和灯一起换</p>
+        <div class="note" id="dotOwner" style="margin-bottom:10px"></div>
+        <div id="statics"></div>
+      </section>
+
+      <!-- 番茄钟 -->
+      <section class="pane" data-pane="pomodoro">
+        <p class="label">番茄钟</p>
+        <div class="cols" style="grid-template-columns:minmax(0,1fr) 250px;gap:20px;margin-top:0">
+          <div class="agent">
+            <div class="phase" id="pphase">待机</div>
+            <div class="big" id="pclock">25:00</div>
+            <div class="row" style="margin-top:12px">
+              <button class="btn primary" id="pstart">开始</button>
+              <button class="btn" id="pskip">跳到下一段</button>
+              <button class="btn" id="preset">重置</button>
+            </div>
+            <div class="meta" id="pmeta" style="margin-top:12px">—</div>
+          </div>
+          <div>
+            <p class="label">今日</p>
+            <div class="agent" style="text-align:center;padding:18px 12px">
+              <div class="big" id="pcount" style="font-size:42px;color:var(--accent)">0</div>
+              <div class="phase">个番茄</div>
+            </div>
+          </div>
+        </div>
+
+        <p class="label" style="margin-top:22px">时长</p>
+        <div class="chips" id="ppresets"></div>
+        <div class="row" style="margin-top:12px">
+          <label class="row" style="gap:6px"><input type="checkbox" id="pauto" checked>
+            <span style="color:var(--dim2);font-size:12.5px">时间到自动进入下一段</span></label>
+          <label class="row" style="gap:6px"><input type="checkbox" id="pnotify" checked>
+            <span style="color:var(--dim2);font-size:12.5px">时间到弹胶囊</span></label>
+        </div>
+
+        <div class="note">
+          <b>专注中</b> —— 点阵屏外圈 20 格走进度（每格 <span id="ptick">75</span> 秒），中心呼吸；
+          键盘是一条<b>横向进度条</b>，16 列从左往右填满。<br>
+          <b>时间到</b> —— 点阵屏跳出一个<b>番茄</b>，一边跳一边闪，键盘整块脉动。
+          持续 30 秒或直到你按「跳到下一段」。<br>
+          <b>休息中</b> —— 两边都转绿，进度环倒着走。<br>
+          最后 20% 时进度环会慢慢转红，余光就能感觉到快到点了。
+        </div>
+      </section>
+
+      <!-- Vibe coding -->
+      <section class="pane" data-pane="vibe">
+        <p class="label">Vibe Coding 模式</p>
+        <div id="vSessions"></div>
+        <div class="row" style="margin-top:15px">
+          <label class="row" style="gap:6px"><input type="checkbox" id="vLight" checked>
+            <span style="color:var(--dim2);font-size:12.5px">「需要你」时同时亮背光</span></label>
+          <label class="row" style="gap:6px"><input type="checkbox" id="vNotify" checked>
+            <span style="color:var(--dim2);font-size:12.5px">桌面弹通知</span></label>
+          <button class="btn" id="vPerm">开启通知权限</button>
+          <button class="btn" id="vTest">模拟 coder / writer</button>
+          <button class="btn" id="vAlert">有事弹胶囊：关</button>
+        </div>
+        <div class="note">
+          <b>键盘完全不参与</b> —— 保持你当前主题的配色不变。
+          状态只由点阵屏上的<b>电子宠物</b>表达：睡觉 / 张望 / 瞪眼蹦跳 / 跳起来冒星星 / 耷拉着。<br>
+          点阵屏归谁管，只由顶上那排模式决定：<b>选主题就只有主题图，选 vibe 就只有宠物</b>，
+          互不打断。要不要在有事时额外提醒，是上面那个独立开关，提醒只弹胶囊、不碰点阵屏。<br>
+          coder 和 writer 的区分放在 HUD 胶囊里用文字说，比用灯猜准确。<br>
+          远端 hook 经 SSH 反向隧道打回本机 9099。安装见 <b>remote/</b> 目录。<br>
+          上报是 <b>async</b> 的，隧道断了也不会拖慢你的 Claude。
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ═══════════════ 协议层 ═══════════════
+   32 字节输出报文, reportId 0:
+     [0]=0xAA [1]=cmd [2..3]=offset(LE) [4]=len [5]=seq [6..7]=0 [8..31]=payload
+   cmd 16 握手(5s TTL) | 20 读配置 | 21 写配置 | 47 关同步 | 59 写点阵矩阵
+   配置结构 64B:  [2]背光模式 [3]背光亮度 [4]速度 [5]彩色 [7..9]背光RGB
+                  [30]点阵模式 [31]点阵亮度 [35..37]点阵RGB
+   点阵矩阵 108B RGB888 行主序, 行0在上, 列0在左, 5 包 × 24B
+═══════════════════════════════════════ */
+const VID=0x373B, C_HAND=16, C_READ=20, C_WRITE=21, C_NOSYNC=47, C_MATRIX=59;
+const FILTERS=[{vendorId:VID, usagePage:0xFF60, usage:0x61}];
+const CFG={ blMode:2, blBright:3, blSpeed:4, blColorful:5, blR:7, blG:8, blB:9,
+            dsMode:30, dsBright:31, dsR:35, dsG:36, dsB:37,
+            sleepL:46, sleepM:47, sleepH:48 };
+const DS_CUSTOM=6;
+/* 背光效果表（中文名从驱动 i18n 解出）。第三项 = 是否吃自定义颜色。
+   注意：0 是「全灭」不是常亮 —— 这 21 个内置效果里没有真正的常亮，
+   要纯色只能走 253 自定义（每键 4bit 调色板索引，另一套协议）。 */
+const BL_MODES=[
+  [3,"单色呼吸",1],[1,"彩虹流光1",1],[7,"彩虹流光2",1],[19,"彩虹流光3",1],[8,"彩虹流光4",1],
+  [4,"彩虹",1],[20,"动态彩虹",1],[2,"彩色呼吸",0],[12,"霓虹",0],[5,"按键点亮",1],
+  [6,"彩色漩涡1",1],[14,"彩色漩涡2",1],[9,"光谱飘动1",1],[10,"光谱飘动2",1],[11,"光谱飘动3",1],
+  [16,"光谱扩散1",1],[18,"光谱扩散2",1],[15,"彩带飘动",1],[13,"彩虹雨滴",1],[0,"全灭",0]
+];
+
+let dev=null, seq=0, lastHand=0, frames=0, fpsT0=performance.now();
+let lastErr="", pushOK=0, awake=true;   /* 推流的成败 + 键盘是否应答，报给宿主 */
+let devInfo="", devPick="";             /* 挑设备的过程，出问题时能看见 */
+/* vibe 模式的点阵屏归属开关。声明必须放在这么早：画廊建好时 renderDotOwner()
+   就会读它，而它原来声明在两千行之后 —— MODE 是 vibe 时一读就是暂时性死区错误，
+   后半个脚本全废（表现：页面活着但什么都不推）。 */
+/* 「有事要不要提醒」是独立开关，跟点阵屏归谁管无关。
+   提醒只走胶囊，绝不碰点阵屏 —— 点阵屏永远只归当前模式管。 */
+let ALERT_ON = localStorage.getItem("yogo_alert")==="1";
+const $=id=>document.getElementById(id);
+/* 页面里任何没接住的异常都报给本地服务，写进 yogo.log ——
+   控制台窗口平时藏在托盘里，看不见它的 console，出了错只能靠这个。 */
+window.addEventListener("error", e=>{
+  try{ fetch("/log",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({where:"page", msg:String(e.message), src:String(e.filename||""),
+                         line:e.lineno, col:e.colno})}); }catch(_){}
+});
+window.addEventListener("unhandledrejection", e=>{
+  try{ fetch("/log",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({where:"page-promise", msg:String(e.reason&&e.reason.message||e.reason)})}); }catch(_){}
+});
+
+/* ═══════════════ 传输层：走本地服务 ═══════════════
+   键盘由托盘进程直接持有（kbd.py，Windows HID API）。这页只是遥控器：
+   要推什么帧、改什么配置，POST 给本地服务，由它写设备。
+   好处：不再有 WebHID 授权（接收器插拔也不掉），页面重启不影响键盘。 */
+async function kbCall(path, body){
+  const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},
+                             body:JSON.stringify(body||{})});
+  const d=await r.json();
+  if(!d.ok){
+    lastErr=d.why||"键盘调用失败";
+    if(d.awake===false) markAsleep();
+    throw new Error(lastErr);
+  }
+  if(d.awake) markAwake();
+  return d;
+}
+async function handshake(){ /* 握手由服务端自己节流 */ }
+async function readConfig(){ const d=await kbCall("/kb/readcfg"); awake=true; return new Uint8Array(d.cfg); }
+async function writeConfig(cfg){
+  const bytes={}; for(let i=0;i<cfg.length;i++) bytes[i]=cfg[i];
+  await kbCall("/kb/config",{bytes});
+}
+/** 读-改-写：只动指定字节，不碰你在 ATK HUB 里的其他设置 */
+async function patchConfig(patch){
+  const bytes={};
+  for(const k in patch) bytes[CFG[k]]=Math.max(0,Math.min(255,patch[k]|0));
+  const d=await kbCall("/kb/config",{bytes});
+  return new Uint8Array(d.cfg);
+}
+async function pushMatrix(rgb){
+  try{ return await _pushMatrix(rgb); }
+  catch(e){ lastErr=String(e && e.message || e).slice(0,120); throw e; }
+}
+async function _pushMatrix(rgb){
+  const flat=[], k=DOT_BRIGHT/100;
+  /* 点阵屏默认走原始意图色 —— 实测它的混色本来就准，套键盘那套校正反而搞坏。
+     GAIN_DOT 勾上才同时应用饱和校正和通道增益。 */
+  for(const row of rgb) for(const p1 of row){ const px=GAIN_DOT?gr(ledize(p1)):p1;
+    flat.push(clamp(px[0]*k),clamp(px[1]*k),clamp(px[2]*k)); }
+  await kbCall("/kb/matrix",{rgb:flat});
+  frames++; pushOK++; lastErr=""; drawPreview(rgb);
+}
+
+/* ═══════════════ 键盘背光逐键推流 ═══════════════
+   物理布局 6 行 × 16 列，84 颗灯，255 = 空位（无灯）。
+   走 cmd 46（open_sync_led）：168 字节 RGB565 小端，7 包 × 24B，写 RAM 不吃 flash。
+   前提：配置里背光模式必须是 254（音乐律动），否则固件不接推流。
+═══════════════════════════════════════════════ */
+const KB_MAP=[
+  [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15],
+  [16,17,18,19,20,21,22,23,24,25,26,27,28,29,255,255],
+  [30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,255],
+  [45,46,47,48,49,50,51,52,53,54,55,56,57,58,255,255],
+  [59,60,61,62,63,64,65,66,67,68,69,70,71,72,255,255],
+  [73,74,75,255,76,255,255,255,255,77,78,79,80,81,82,83]
+];
+const KB_N=84, BL_STREAM=254, C_SYNCLED=46, C_ENDSYNC=47;
+/* 亮度走软件缩放：推流是 RAM，改一下立刻生效，且完全不写 flash */
+let KB_BRIGHT=+(localStorage.getItem("yogo_kbbr")||70);
+let DOT_BRIGHT=+(localStorage.getItem("yogo_dotbr")||50);   // 默认压到一半：LED 电流跟亮度基本线性
+/* 通道增益（白平衡）。这批灯珠绿、蓝的发光效率明显高于红，
+   等值混合时红被压过去 —— 黄看着像绿、青看着像蓝。压低 G/B 把红拉回来。 */
+let GAIN=(()=>{ try{ const v=JSON.parse(localStorage.getItem("yogo_gain"));
+  if(Array.isArray(v)&&v.length===3) return v; }catch(e){} return [1, 0.50, 0.42]; })();
+/* 通道增益 + 亮度归一化。
+   增益的作用是修「色相比例」，不该顺带砍亮度 —— 纯绿 (0,255,0) 乘 0.25 会只剩 1/4 亮，
+   冷色系主题整块发暗。所以增益后按比例放回原来的最大通道值：
+   色相比例保住了，亮度也没丢。暖色（R 主导）的 max 本来就没被动，k=1，
+   所以之前标定出来的黄/橙不受影响。 */
+/* 不做归一化。
+   这批灯珠每单位值的发光强度差得极大：以红为 1，绿约 4 倍，蓝约 14 倍。
+   要让不同色相看起来一样亮，设备值本来就必须差这么多 ——
+   之前加的「归一化」把单色又拉回 255，等于把校准抵消掉，蓝色因此特别刺眼。 */
+/* 感知亮度权重由标定增益反推：红=1、绿≈4、蓝≈14。红是最弱的通道。
+   ── 默认走【色准优先】：每个颜色只归一到自己的最大通道，不混白、不压制。
+      代价是红橙黄本来就比蓝暗（红的 R 顶满只有 255 光量，蓝有 1645），硬件决定的。
+   ── 勾上「统一亮度」才会把所有颜色拉到同一光量：暗色混白提上来、亮色等比压下来。
+      混白只降饱和不改色相，但红会被洗成珊瑚色 —— 实测不值得，所以默认关。 */
+let EQON=localStorage.getItem("yogo_eqon")==="1";
+/* 「亮」这根滑杆现在是纯粹的亮度上限，只压不提，绝不混白：
+     拉到最左 255  = 全部压到红的水位 → 七色完全等亮，色相全部精确
+     拉到最右 1645 = 谁都不压 → 每个色相各自跑满，但蓝比红亮 6.5 倍
+   中间任意位置都是这两者之间的连续过渡。混白的路子已经验证过两次：
+   红会发粉、橙会发白（蓝的效率是红的 6.45 倍，掺一点就毁），彻底放弃。 */
+let EQL=+(localStorage.getItem("yogo_eql")||255);
+let LCAP=4000;
+/* 校正强度：暖色亮度 ↔ 色相准确度，二选一，没有两全的办法。
+   红是最弱的通道（红1 : 绿4 : 蓝14），暖色的 R 已经顶到 255 没余量，
+   要更亮只能把绿加回去，但绿一加黄就往绿偏。
+   1.00 = 完全按你标定的走，黄最准但最暗；往左拉 = 暖色变亮，黄逐渐偏绿。 */
+let CORR=+(localStorage.getItem("yogo_corr")||70)/100;   // 实测 70% 是甜点：亮 1.5 倍且黄还够黄
+function gr(c){
+  const G=[Math.pow(GAIN[0],CORR), Math.pow(GAIN[1],CORR), Math.pow(GAIN[2],CORR)];
+  let g=[c[0]*G[0], c[1]*G[1], c[2]*G[2]];
+  const mx=Math.max(g[0],g[1],g[2]);
+  if(mx<=0) return g;
+  const k=255/mx; g=[g[0]*k, g[1]*k, g[2]*k];
+  /* 统一亮度：所有颜色对齐到同一个感知光量。
+     - 高于水位：等比压下来，色相完全不变
+     - 低于水位：混一点白提上来，但混白量硬性封顶（WMAX），
+       宁可差一点也不把红洗成珊瑚色 —— 上次水位定 700 就是栽在这。
+     水位定在 450 附近时红只需要 (255,21,21)，几乎看不出失真。 */
+  const W=[1, G[1]?1/G[1]:1, G[2]?1/G[2]:1];
+  const L0=g[0]*W[0]+g[1]*W[1]+g[2]*W[2];
+  if(L0<=0) return g;
+  if(L0>EQL){ const t=EQL/L0; return [g[0]*t, g[1]*t, g[2]*t]; }
+  return g;                                     // 低于水位的一律不动 —— 混白会让红发粉、橙发白
+}
+/* 饱和度校正 —— 这是整套配色的关键。
+   LED 是发光体不是颜料：低饱和色（比如 Claude 品牌橙 #D97757，B 有 87）
+   三个通道一起亮，肉眼看到的就是白。官方预设色板 15 个色全是
+   「最大通道 255 / 最小通道 ≤ 50」的高饱和色，就是这个原因。
+   这里保持明度不变，只把饱和度往上推，纯灰色不动。 */
+let SAT=+(localStorage.getItem("yogo_sat")||180)/100;
+function ledize(c){
+  const mx=Math.max(c[0],c[1],c[2]), mn=Math.min(c[0],c[1],c[2]);
+  if(mx<=0) return [0,0,0];
+  const s=(mx-mn)/mx;
+  if(s<=0.001) return c;                       // 纯灰/纯白：主题要的就是它，不动
+  const ratio=Math.min(1, s*SAT)/s;
+  return [mx-(mx-c[0])*ratio, mx-(mx-c[1])*ratio, mx-(mx-c[2])*ratio];
+}
+/* 点阵屏实测混色本来就准，所有校正默认只作用于键盘背光，别动它 */
+let GAIN_DOT=false;
+try{ localStorage.removeItem("yogo_gaindot"); }catch(e){}
+let RAW=false;                          // 校准时绕过饱和/增益，直接送原始值
+let KB_OFF=localStorage.getItem("yogo_kboff")==="1";   // 只亮点阵屏：键盘灯全熄，屏照常
+/* 原厂灯效：把背光模式写成 0-20 中的一个，交给固件自己跑，颜色也用它自带的。
+   点阵屏走命令 59，是完全独立的通道，所以「原厂灯光 + 我们的点阵屏」可以并存。
+   为 null 时才走我们自己的逐键推流（模式 254）。 */
+let FW_FX=(()=>{ const v=localStorage.getItem("yogo_fwfx");
+  return (v===null||v==="") ? null : +v; })();   // 只亮点阵屏：键盘灯全熄，屏照常
+async function pushKeys(arr){
+  if(FW_FX!=null||KB_OFF){ drawKeyboard(new Array(KB_N).fill([0,0,0])); return; }  // 交给固件 / 已关，一个字节都不发
+  const p=[], k=KB_BRIGHT/100;
+  for(let i=0;i<KB_N;i++){
+    const c=RAW ? (arr[i]||[0,0,0]) : gr(ledize(arr[i]||[0,0,0]));
+    const R=clamp(c[0]*k), G=clamp(c[1]*k), B=clamp(c[2]*k);
+    const v=((R>>3&31)<<11)|((G>>2&63)<<5)|(B>>3&31);
+    p.push(v&255, (v>>8)&255);
+  }
+  await kbCall("/kb/keys",{rgb565:p});
+  drawKeyboard(arr);
+}
+const stopKeys=()=>kbCall("/kb/stopkeys").catch(()=>{});
+/** 6×16 字符画 -> 84 个 RGB。空位自动跳过。 */
+function kbArt(rows, pal){
+  const out=new Array(KB_N).fill([0,0,0]);
+  for(let r=0;r<6;r++) for(let c=0;c<16;c++){
+    const led=KB_MAP[r][c]; if(led===255) continue;
+    const col=pal[(rows[r]||"")[c]]; if(col) out[led]=col.slice();
+  }
+  return out;
+}
+
+/* ═══════════════ 连接：问本地服务 ═══════════════ */
+async function attach(info){
+  dev={opened:true, productName:info.product||"ATK YOGO 75 PRO Dongle"};
+  $("dot").classList.add("on"); $("stat").textContent=dev.productName;
+  $("conn").textContent="重新连接";
+  try{ await patchConfig({dsMode:DS_CUSTOM, dsBright:75}); }
+  catch(e){ lastErr="首帧配置失败: "+String(e&&e.message||e).slice(0,90); }
+  try{ await ensureSleep(); }catch(e){}
+  lightNow=null;                                  // 重连后强制重发一次背光
+  streamOn=null;
+  applyMode(MODE, true);
+}
+function detach(why){
+  dev=null; streamOn=null;
+  $("dot").classList.remove("on"); $("stat").textContent=why||"未连接"; $("conn").textContent="重新连接";
+}
+$("conn").addEventListener("click", async()=>{
+  $("stat").textContent="重连中…";
+  try{ const d=await kbCall("/kb/reconnect"); await attach(d); }
+  catch(e){ detach("连不上："+e.message); }
+});
+/* 2 秒问一次服务端：设备在不在。在而页面还没挂上 -> 挂上；不在了 -> 摘掉。 */
+(async function kbWatch(){
+  while(true){
+    try{
+      const d=await (await fetch("/kb/status",{cache:"no-store"})).json();
+      devPick = d.connected ? "服务端已持有设备" : ("服务端没设备："+(d.err||""));
+      if(d.connected && !dev) await attach(d);
+      else if(!d.connected && dev) detach("接收器不在（"+(d.err||"")+"）");
+    }catch(e){}
+    await new Promise(r=>setTimeout(r, 2000));
+  }
+})();
+
+/* ═══════════════ 画布 ═══════════════ */
+const PAL={ ".":[0,0,0], r:[255,40,30], o:[255,120,0], y:[255,210,0], g:[40,220,60], c:[0,200,255],
+  b:[40,90,255], p:[255,60,170], v:[160,60,255], w:[255,255,255], d:[90,90,110], k:[26,20,10],
+  /* 与键盘调色板对齐的补充色，供新主题的点阵图使用 */
+  a:[0,190,240], A:[125,228,248], l:[110,168,218], s:[62,62,74], S:[135,135,150],
+  O:[245,165,120], n:[118,52,32], m:[255,120,0], Y:[255,228,95], G:[115,238,125], e:[8,10,16],
+  t:[0,235,205], L:[60,255,0], B:[165,72,0] };
+const rows2rgb=rs=>rs.map(r=>[...r].map(ch=>(PAL[ch]||[0,0,0]).slice()));
+const blank=()=>Array.from({length:6},()=>Array.from({length:6},()=>[0,0,0]));
+const clamp=v=>Math.max(0,Math.min(255,Math.round(v)));
+const RING=(()=>{const p=[];for(let c=0;c<6;c++)p.push([0,c]);for(let r=1;r<6;r++)p.push([r,5]);
+  for(let c=4;c>=0;c--)p.push([5,c]);for(let r=4;r>=1;r--)p.push([r,0]);return p;})();
+function hsv(h,s,v){h=((h%360)+360)%360;const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r,g,b;
+  if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];
+  else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];
+  return [clamp((r+m)*255),clamp((g+m)*255),clamp((b+m)*255)];}
+
+const prevCells=[];
+for(let i=0;i<36;i++){const b=document.createElement("div");b.className="px";$("prev").appendChild(b);prevCells.push(b);}
+function drawPreview(rgb){
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const [R,G,B]=rgb[r][c], el=prevCells[r*6+c], lit=R+G+B>12;
+    const hex="#"+[R,G,B].map(v=>clamp(v).toString(16).padStart(2,"0")).join("");
+    el.style.background=lit?hex:"#100E18";
+    el.style.boxShadow=lit?"inset 0 0 0 1px #ffffff26, 0 0 10px "+hex+"b0":"inset 0 0 0 1px #ffffff08";
+  }
+}
+const kbCells=[];
+(function(){ const box=$("kbprev");
+  for(let r=0;r<6;r++) for(let c=0;c<16;c++){
+    const i=document.createElement("i"); const led=KB_MAP[r][c];
+    if(led===255) i.className="gap";
+    box.appendChild(i); kbCells.push({el:i, led});
+  } })();
+function drawKeyboard(arr){
+  for(const {el,led} of kbCells){
+    if(led===255) continue;
+    const c=arr[led]||[0,0,0], lit=c[0]+c[1]+c[2]>10;
+    const hex="#"+c.map(v=>clamp(v).toString(16).padStart(2,"0")).join("");
+    el.style.background=lit?hex:"#0C0A12";
+    el.style.boxShadow=lit?"0 0 6px "+hex+"cc":"none";
+  }
+}
+function drawStrip(color, bright){                    // 内置效果时没有逐键数据，整体铺色
+  const c = (!color||!bright) ? [0,0,0] : color.map(v=>clamp(v*bright/90));
+  drawKeyboard(new Array(KB_N).fill(c));
+}
+setInterval(()=>{ const dt=(performance.now()-fpsT0)/1000;
+  $("metric").textContent = dev ? (frames/dt).toFixed(1)+" fps · 模式 "+MODE : "—";
+  if(dt>4){ frames=0; fpsT0=performance.now(); } },1000);
+
+/* ═══════════════ 图案 / 主题 / 动画 ═══════════════ */
+const STATICS={
+  tomato:["..gg..",".rrrr.","rrrrrr","rrrrrr",".rrrr.","..rr.."],
+  heart:["rr..rr","rrrrrr","rrrrrr",".rrrr.","..rr..","......"],
+  pikachu:[".y..y.","yyyyyy","y.yy.y","ryyyyr","yy..yy",".yyyy."],
+  cat:["o....o","oooooo","o.oo.o","ooppoo","oooooo",".oooo."],
+  skull:[".llll.","llllll","l.ll.l","ll..ll",".llll.",".l.l.l"],
+  ghost:[".cccc.","cccccc","c.cc.c","cccccc","cccccc","c.c.c."],
+  invader:["g.g..g",".gggg.","gg..gg","gggggg",".g..g.","g.gg.g"],
+  moon:["..yyy.",".yy...","yy....","yy....",".yy...","..yyy."],
+  coffee:[".s.s..","..s.s.","lllll.","llllll","lllll.",".lll.."],
+  bolt:["...yy.","..yy..",".yyyy.","..yy..",".yy...",".y...."],
+  wave:["......",".c..c.","c.cc.c","......",".b..b.","b.bb.b"],
+  prompt:["gg....","..gg..","....gg","..gg..","gg....",".gggg."],
+  /* ── 蔬菜 ── */
+  carrot:  [".g.g..","..g.g.",".oooo.",".oooo.","..oo..","..o..."],
+  broccoli:[".gggg.","gggggg","gggggg","..GG..","..GG..","..GG.."],
+  eggplant:["..g...",".gvg..",".vvvv.","vvvvvv","vvvvvv",".vvvv."],
+  corn:    ["..yy..",".yyyy.","gyyyyg","gyyyyg",".yyyy.","..yy.."],
+  chili:   ["..gg..","..rr..","..rr..",".rr...",".rr...",".r...."],
+  pumpkin: ["..gg..",".mmmm.","mmmmmm","mmmmmm","mmmmmm",".mmmm."],
+  pea:     ["....g.","...gg.",".gggg.","gGGGGg",".gggg.","......"],
+  /* ── 水果 ── */
+  apple:   ["..g...",".rrrr.","rrrrrr","rrrrrr","rrrrrr",".rrrr."],
+  banana:  ["....s.","...yy.","..yy..",".yy...",".yy...","..yy.."],
+  berry:   [".g.g..",".gggg.","rrrrrr","rrrrrr",".rrrr.","..rr.."],
+  grape:   ["...g..",".v.v.v","vvvvvv",".vvvv.","..vv..","......"],
+  orange:  ["...gg.",".mmmm.","mmmmmm","mmmmmm","mmmmmm",".mmmm."],
+  melon:   [".rrrr.","rrrrrr","rr.rrr","rrr.rr","GGGGGG","gggggg"],
+  pineapp: [".g.g..","..gg..",".yyyy.","yy..yy",".yyyy.","yy..yy"],
+  cherry:  ["..gg..",".g..g.",".g..g.","rr..rr","rr..rr","......"],
+  lemon:   ["......","..yy..",".yyyy.","yyyyyy",".yyyy.","..yy.."],
+  /* ── 动物 ── */
+  rabbit:  [".p..p.",".p..p.",".pppp.","p.pp.p","pppppp",".p..p."],
+  frog:    [".g..g.","gGggGg","gggggg","gggggg","g.gg.g",".gggg."],
+  chick:   ["..yy..",".yyyy.","y.yy.y","yymmyy","yyyyyy",".m..m."],
+  pig:     ["p....p","pppppp","p.pp.p","pprrpp","pprrpp",".pppp."],
+  fox:     ["o....o",".oooo.","o.oo.o","oooooo",".OrrO.","..OO.."],
+  whale:   [".a....","bbbb.b","bbbbbb","bbbbbb",".bbbb.","......"],
+  bee:     [".s..s.",".yyyy.","y....y",".yyyy.","s.ss.s",".yyyy."],
+  /* ── EVA ── */
+  eva01:   ["..LL..",".vvvv.","vvvvvv","vLvvLv","vvvvvv",".vvvv."],
+  eva00:   ["..oo..",".oooo.","oooooo","o.aa.o","oooooo",".oooo."],
+  atfield: ["..LL..",".L..L.","L....L","L....L",".L..L.","..LL.."],
+  /* ── 我的世界 ── */
+  grass:   ["gggggg","gLggLg","BBBBBB","BnBBnB","BBBnBB","BBBBBB"],
+  creeper: ["gggggg","kkggkk","kkggkk","ggkkgg","gkkkkg","gkggkg"],
+  diamond: ["..aa..",".aaaa.","aaaaaa","aaaaaa",".aaaa.","..aa.."],
+  tnt:     ["nnnnnn","rrrrrr","YYYYYY","rrrrrr","rrrrrr","nnnnnn"],
+  enderman:[".ssss.","ssssss","vssssv","ssssss",".ssss.",".s..s."],
+  torch:   ["..yy..",".yYYy.","..yy..","..BB..","..BB..","..BB.."],
+  redstone:["..r...","..r...","rrrrrr","..r...","..r...","..r..."],
+  sword:   ["....aa","...aa.","..aa..",".aa...","BB....","B....."],
+  jackol:  ["..gg..","mmmmmm","m.mm.m","mmmmmm","m.mm.m",".mmmm."],
+  emerald: ["..gg..",".gLLg.","gLLLLg","gLLLLg",".gLLg.","..gg.."]
+};
+/* 图库分组 —— 平铺一大片找不到东西 */
+const GALLERY={
+  "角色 / 符号":["pikachu","cat","ghost","invader","skull","moon","bolt","heart","prompt","coffee","wave","tomato"],
+  "蔬菜":["carrot","broccoli","eggplant","corn","chili","pumpkin","pea"],
+  "水果":["apple","banana","berry","grape","orange","melon","pineapp","cherry","lemon"],
+  "动物":["rabbit","frog","chick","pig","fox","whale","bee"],
+  "EVA":["eva01","eva00","atfield"],
+  "我的世界":["grass","creeper","diamond","tnt","enderman","torch","redstone","sword","jackol","emerald"]
+};
+/* ══════ 键盘调色板（逐键字符画用）══════ */
+/* 键盘调色板 —— 刻意不含纯白。84 颗灯在亮度 90 下铺白会非常晃眼，
+   所有「浅色」都带住色相，最亮的几个也压在 245 以内。 */
+const KP={ ".":null,
+  k:[20,12,4],    e:[6,8,14],     s:[62,62,74],   S:[132,132,148],
+  y:[255,195,0],  Y:[255,225,90], d:[112,86,26],
+  r:[255,40,35],  R:[250,110,72], n:[118,52,32],
+  o:[217,119,87], O:[245,165,120], m:[255,120,0],
+  g:[25,190,45],  G:[110,235,120],
+  b:[25,95,225],  l:[108,162,212], a:[0,185,235],  A:[118,222,244],
+  p:[232,95,158], v:[140,65,240], L:[60,255,0], B:[165,72,0] };
+
+const mix=(c1,c2,k)=>[clamp(c1[0]+(c2[0]-c1[0])*k), clamp(c1[1]+(c2[1]-c1[1])*k), clamp(c1[2]+(c2[2]-c1[2])*k)];
+const kbConst=rows=>{ const a=kbArt(rows,KP); return ()=>a; };
+const eachKey=fn=>{ const out=new Array(KB_N).fill([0,0,0]);
+  for(let r=0;r<6;r++) for(let c=0;c<16;c++){ const led=KB_MAP[r][c];
+    if(led!==255) out[led]=fn(r,c); } return out; };
+
+/* ════════════ 构图工具 ════════════
+   这块键盘的【亮度差肉眼分辨不出来】，所以区分一律靠色相：
+   所有键跑满亮度，整体明暗交给全局亮度滑杆。
+   full() 兜底：任何颜色进来先归一到最大通道 255。
+   下面每个函数是一种不同的摆法，主题各用各的，不复用同一种。       */
+const full=c=>{ const mx=Math.max(c[0],c[1],c[2]);
+  return mx<=0?[0,0,0]:[c[0]*255/mx, c[1]*255/mx, c[2]*255/mx]; };
+/** 色相旋转，保持满饱和满亮度 —— 用来从主色自动生出有对比的第二色 */
+function hueShift(c, deg){
+  const r=c[0]/255,g=c[1]/255,b=c[2]/255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+  if(d<=0) return full(c);
+  let h; if(mx===r) h=((g-b)/d)%6; else if(mx===g) h=(b-r)/d+2; else h=(r-g)/d+4;
+  h=(h*60+deg+360)%360;
+  const cc=d/mx, x=cc*(1-Math.abs((h/60)%2-1)), m=1-cc;
+  let o; if(h<60)o=[cc,x,0]; else if(h<120)o=[x,cc,0]; else if(h<180)o=[0,cc,x];
+  else if(h<240)o=[0,x,cc]; else if(h<300)o=[x,0,cc]; else o=[cc,0,x];
+  return [clamp((o[0]+m)*255), clamp((o[1]+m)*255), clamp((o[2]+m)*255)];
+}
+function gradAt(stops, x){
+  let a=stops[0], b=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++) if(x>=stops[i][0]&&x<=stops[i+1][0]){ a=stops[i]; b=stops[i+1]; break; }
+  const k=(b[0]-a[0])?(x-a[0])/(b[0]-a[0]):0;
+  return full(mix(a[1],b[1],k));
+}
+
+/* ── 摆法 1：横向渐变（16 列足够平滑）── */
+function kbGrad(stops){ return ()=>eachKey((r,c)=>gradAt(stops, c/15)); }
+function kbGradMove(stops, speed){
+  return t=>eachKey((r,c)=>{                     // 同样走往返，避免渐变首尾跳回的接缝
+    let x=(((c/15)+(t||0)*speed)%1+1)%1*2;
+    if(x>1) x=2-x;
+    return gradAt(stops, x); }); }
+
+/* ── 摆法 2：纵向分层（6 行各一个色相，天空 / 上下身）── */
+function kbRows(cols){ return ()=>eachKey((r,c)=>full(cols[r]||cols[cols.length-1])); }
+function kbRowsMove(cols, speed){
+  return t=>eachKey((r,c)=>{ const x=(r/5 + (t||0)*speed)%1;
+    const i=Math.min(cols.length-2, Math.floor(x*(cols.length-1)));
+    const k=x*(cols.length-1)-i;
+    return full(mix(cols[i], cols[i+1], k)); }); }
+
+/* ── 摆法 3：棋盘交错（两个色相互咬，纹理感最强）── */
+function kbCheck(a, b, size, speed){
+  const sz=size||2;
+  return t=>eachKey((r,c)=>{
+    const ph=speed?Math.floor((t||0)*speed):0;
+    return full(((Math.floor(c/sz)+Math.floor(r/sz)+ph)%2) ? b : a); }); }
+
+/* ── 摆法 4：竖条纹（垄 / 均衡器 / 条纹袖）── */
+function kbStripes(cols, w, speed){
+  const ww=w||2;
+  return t=>eachKey((r,c)=>{
+    const i=Math.floor((c/ww) + ((t||0)*(speed||0)));
+    return full(cols[((i%cols.length)+cols.length)%cols.length]); }); }
+
+/* ── 摆法 5：中央竖带（企鹅肚子 / 跑道）── */
+function kbBand(inner, outer, c0, c1){
+  const a=c0==null?5:c0, b=c1==null?10:c1;
+  return ()=>eachKey((r,c)=>full(c>=a&&c<=b ? inner : outer)); }
+
+/* ── 摆法 6：随机点缀（星空 / 萤火）── */
+function kbScatter(base, acc, thresh, speed){
+  return t=>eachKey((r,c)=>{
+    const s=Math.sin((t||0)*(speed||0.9) + (r*16+c)*2.399);
+    return full(s>(thresh||0.86) ? acc : base); }); }
+
+/* ── 摆法 7：同心环（水母 / 涟漪）── */
+function kbRings(cols, speed){
+  return t=>eachKey((r,c)=>{
+    const d=Math.hypot((c-7.5)/2.9, r-2.5) - (t||0)*(speed||0);
+    const i=Math.floor(Math.abs(d));
+    return full(cols[((i%cols.length)+cols.length)%cols.length]); }); }
+
+/* ── 摆法 8：显式矩形块（腮红这种"长在特定位置"的特征）── */
+function kbRect(base, rects){
+  return ()=>eachKey((r,c)=>{
+    for(const [c0,c1,r0,r1,col] of rects)
+      if(c>=c0&&c<=c1&&r>=r0&&r<=r1) return full(col);
+    return full(base); }); }
+
+/* ── 摆法 9：径向色相推移（墨在水里化开）── */
+function kbRadial(core, edge, opts){
+  const o=opts||{};
+  return t=>eachKey((r,c)=>{
+    let d=Math.hypot((c-7.5)/7.5, (r-2.5)/2.5);
+    if(o.pulse) d=d/(1+0.18*Math.sin((t||0)*o.pulse));
+    return full(mix(core, edge, Math.min(1,Math.pow(d,o.power||1)))); }); }
+
+/* ── 摆法 10：左右分割（可移动的分界线 = 被吃掉的进度）── */
+function kbSplit(left, right, at, blend, speed){
+  const w=blend==null?2.2:blend;
+  return t=>{ const a=(at==null?7.5:at)+(speed?((t||0)*speed)%20-6:0);
+    return eachKey((r,c)=>full(mix(left, right, Math.max(0,Math.min(1,(c-a+w/2)/w))))); }; }
+
+/* ── 摆法 11：对角扫（熔岩裂缝）── */
+function kbDiag(base, hi, speed, width){
+  return t=>eachKey((r,c)=>{
+    const x=(c/15)*0.75+(1-r/5)*0.25;
+    const d=Math.abs(x-((((t||0)*speed)%1.6)-0.3));
+    return d<width ? full(mix(base,hi,Math.pow(1-d/width,1.8))) : full(base); }); }
+
+/* ── 摆法 12：对角渐变（从一角铺到另一角）── */
+function kbCorner(a, b){
+  return ()=>eachKey((r,c)=>full(mix(a, b, (c/15*0.72 + (r/5)*0.28)))); }
+
+/* ── 摆法 13：竖向下落（数字雨）── */
+function kbFall(base, drop, speed, density){
+  const seed=Array.from({length:16},(_,i)=>(i*2.399)%6);
+  return t=>eachKey((r,c)=>{
+    const d=((t*speed+seed[c])%9)-1.5-r;
+    return (d>=0 && d<density) ? full(mix(base, drop, Math.pow(1-d/density,1.6))) : full(base); }); }
+
+/* ── 摆法 14：底色 + 标志形状（心电图）── */
+function kbShape(base, mask, hi, opts){
+  const o=opts||{};
+  return t=>eachKey((r,c)=>{
+    if((mask[r]||"")[c]!=="X") return full(base);
+    if(o.sweep){ const head=((((t||0)*o.sweep)%1.6)-0.3);
+      return full(mix(base, hi, 0.45+0.55*Math.max(0,1-Math.abs(c/15-head)*3.2))); }
+    return full(hi); }); }
+const ECG=["................","................","......X.........",
+           "XXXXXX.X.XXXXXXX",".......X........","................"];
+
+/* ── 摆法 15：键帽三分区（只留给真正适合分区的主题）── */
+const ZONE=(()=>{
+  const alphas=[17,18,19,20,21,22,23,24,25,26,
+                31,32,33,34,35,36,37,38,39,40,
+                46,47,48,49,50,51,52,53,54,
+                60,61,62,63,64,65,66];
+  const accent=[0,71,80,81,82];
+  const mods=[];
+  for(let i=0;i<84;i++) if(alphas.indexOf(i)<0 && accent.indexOf(i)<0) mods.push(i);
+  return {alphas, mods, accent};
+})();
+const KEY={ ESC:0, DEL:15, TAB:30, CAPS:45, SPACE:76, LSHIFT:59, RSHIFT:70,
+            UP:71, LEFT:80, DOWN:81, RIGHT:82, W:32, A:46, S:47, D:48, ENTER:57 };
+function kbCaps(alpha, mod, accent, opts){
+  const o=opts||{};
+  const map=new Array(KB_N);
+  ZONE.mods.forEach(i=>map[i]=mod);
+  ZONE.alphas.forEach(i=>map[i]=alpha);
+  ZONE.accent.forEach(i=>map[i]=accent||mod);
+  return t=>{ const spin=o.cycle?(t||0)*o.cycle*60:0;
+    return eachKey((r,c)=>{ let col=map[KB_MAP[r][c]]||mod;
+      return full(spin?hueShift(col,spin):col); }); }; }
+
+/* ── 摆法 16：四象限（四块各一个色相）── */
+function kbQuad(a,b,c2,d){
+  return ()=>eachKey((r,c)=>full(r<3 ? (c<8?a:b) : (c<8?c2:d))); }
+
+/* ── 摆法 17：斜条纹（对角方向的色带，跟横竖都不一样）── */
+function kbDiagStripes(cols, w, speed){
+  const ww=w||3;
+  return t=>eachKey((r,c)=>{
+    const i=Math.floor((c + r*2.2)/ww + ((t||0)*(speed||0)));
+    return full(cols[((i%cols.length)+cols.length)%cols.length]); }); }
+
+/* ── 摆法 18：扇形（从中心放射的角度分区 = 触手 / 风车）── */
+function kbSector(cols, speed){
+  return t=>eachKey((r,c)=>{
+    const a=Math.atan2((r-2.5)*2.6, c-7.5) + (t||0)*(speed||0);
+    const i=Math.floor(((a/(Math.PI*2))%1+1)%1 * cols.length);
+    return full(cols[i%cols.length]); }); }
+
+/* ── 摆法 19：X 交叉（两条对角线用重点色）── */
+function kbCross(base, hi, w){
+  const ww=w||1.6;
+  return ()=>eachKey((r,c)=>{
+    const x=c/15*5, d1=Math.abs(x-r), d2=Math.abs(x-(5-r));
+    return full(Math.min(d1,d2)<ww ? hi : base); }); }
+
+/* ── 摆法 20：马赛克（固定伪随机的色块，有肌理但不闪）── */
+function kbMosaic(cols, size, speed){
+  const sz=size||2;
+  return t=>eachKey((r,c)=>{
+    const bx=Math.floor(c/sz), by=Math.floor(r/sz);
+    const h=Math.sin(bx*12.9898+by*78.233)*43758.5453;
+    const i=Math.floor((((h%1)+1)%1)*cols.length + ((t||0)*(speed||0)));
+    return full(cols[((i%cols.length)+cols.length)%cols.length]); }); }
+
+/* ── 摆法 21：波浪竖条纹（条纹本身是弯的，像垂下来的触手）── */
+function kbWave(cols, w, amp, speed){
+  const ww=w||2.5;
+  return t=>eachKey((r,c)=>{
+    const off=(amp||2)*Math.sin(r*0.9 + (t||0)*(speed||0));
+    const i=Math.floor((c+off)/ww);
+    return full(cols[((i%cols.length)+cols.length)%cols.length]); }); }
+
+/* ── 摆法 22：斜向分割（一条斜线把键盘切成两半）── */
+function kbDiagSplit(a, b, at, blend){
+  const w=blend==null?2.5:blend;
+  return ()=>eachKey((r,c)=>{
+    const x=c - r*1.8;
+    return full(mix(a,b, Math.max(0,Math.min(1,(x-(at==null?4:at)+w/2)/w)))); }); }
+
+/* ── 摆法 23：逐列色相（16 列扫过一段色环）── */
+function kbColumnHue(base, span, speed){
+  return t=>eachKey((r,c)=>full(hueShift(base, (c/15)*span + (t||0)*(speed||0)*60))); }
+
+/* ── 形状掩码：这些不是装饰，是各自主题的标志物 ── */
+const M_BOLT=[".........XXXX...",           // 闪电：皮卡丘
+               ".......XXXX.....",
+               ".....XXXXXXX....",
+               "...XXXXXXX......",
+               ".....XXX........",
+               "...XXX.........."];
+const M_CRACK=["....X........X..",           // 熔岩裂缝：黑色岩壳下发光的缝
+               "....X.......XX..",
+               ".....XXX...XX...",
+               "XXXXXX..XXXX....",
+               "......XX....XXXX",
+               ".......X........"];
+const M_EYES=["................",            // 熊猫的两块黑眼圈
+              "...XXX....XXX...",
+              "...XXX....XXX...",
+              "...XXX....XXX...",
+              "................",
+              "................"];
+const M_TAILS=["XXX..........XXX",           // 初音的双马尾：两侧到底的宽带
+               "XXX..........XX ",
+               "XXX..........XXX",
+               "XXX..........XX ",
+               "XXX..........XX ",
+               "XXX..........XXX"];
+/** 掩码上色：形状一个色，底一个色。两色必须差 90° 以上，否则等于没画 */
+function kbMask(base, mask, hi){
+  return ()=>eachKey((r,c)=>full((mask[r]||"")[c]==="X" ? hi : base)); }
+/** 掩码 + 沿形状流动的电流 */
+function kbMaskFlow(base, mask, hi, hi2, speed){
+  return t=>eachKey((r,c)=>{
+    if((mask[r]||"")[c]!=="X") return full(base);
+    const k=0.5+0.5*Math.sin((t||0)*speed - c*0.55 - r*0.4);
+    return full(mix(hi, hi2, k)); }); }
+/** 螺旋臂：柴犬的卷尾 */
+function kbSpiral(base, hi, turns, speed){
+  return t=>eachKey((r,c)=>{
+    const dx=(c-7.5)/2.9, dy=r-2.5, d=Math.hypot(dx,dy);
+    const a=Math.atan2(dy,dx);
+    const ph=((a/(Math.PI*2)) - d/(turns||3.2) + (t||0)*(speed||0))%1;
+    return full(((ph+1)%1) < 0.34 ? hi : base); }); }
+
+/* ── 摆法 24：菱形阵（A.T. 立场那种六边形障壁的感觉）── */
+function kbDiamond(base, hi, size, speed){
+  const sz=size||4;
+  return t=>eachKey((r,c)=>{
+    const fx=Math.abs((((c + (t||0)*(speed||0)) % (2*sz)) + 2*sz) % (2*sz) - sz);
+    const fy=Math.abs(((r*2.2) % (2*sz)) - sz);
+    return full((fx+fy) < sz*0.95 ? hi : base); }); }
+
+/* ── 摆法 25：单列扫描（独眼来回扫）── */
+function kbScanCol(base, hi, speed, width){
+  return t=>eachKey((r,c)=>{
+    const ph=((t||0)*(speed||0.5))%2;
+    const x=(ph<1?ph:2-ph)*15;                       // 来回，不是循环跳回
+    return full(Math.abs(c-x) < (width||1.6) ? hi : base); }); }
+
+/* ════ 流光引擎 ════
+   原厂灯效好看的关键不是图案，是【连续的场】：颜色随位置平滑变化、整体朝一个方向推。
+   离散格子（棋盘/条纹/菱形/硬边扫描）看着是"色块在跳"，不是"光在流"。
+   下面这套把颜色排成一条首尾相接的色环，用一个连续相位场在键盘上推移，
+   相邻键之间用 smoothstep 过渡，所以没有任何硬边。                        */
+const smoothstep=k=>k*k*(3-2*k);
+/* 相位 → 颜色。用【三角波往返】而不是循环：0→1→0。
+   循环色带的问题是最后一个色直接跳回第一个色，会留一道硬接缝
+   （实测相邻键色差能到 595，看着就是一条裂缝在跑）。往返则首尾天然接上。 */
+function bandAt(cols, ph){
+  const n=cols.length;
+  let x=(((ph%1)+1)%1)*2;
+  if(x>1) x=2-x;
+  const f=x*(n-1), i=Math.min(n-2, Math.floor(f));
+  return full(mix(cols[i], cols[i+1], smoothstep(f-i)));
+}
+/** 线性流光。dx/dy 定方向（1,0=横；0,1=纵；1,0.6=斜），wobble 给一点有机的摆动 */
+function kbFlow(cols, opts){
+  const o=opts||{}, dx=o.dx==null?1:o.dx, dy=o.dy==null?0.35:o.dy;
+  /* rep 默认 0.5：三角波往返会把色带在板上走两遍，所以位置项要减半，
+     让整块键盘只铺【一条完整的色带】—— 相位梯度小了才像"流"，大了就是"跳"。 */
+  const sp=o.speed==null?0.22:o.speed, wob=o.wobble||0, rep=o.repeat==null?0.5:o.repeat;
+  return t=>eachKey((r,c)=>{
+    let ph=(c/15*dx + r/5*dy)*rep - (t||0)*sp;
+    if(wob) ph += wob*Math.sin(r*1.9 + (t||0)*1.25);
+    return bandAt(cols, ph); });
+}
+/** 径向流光：一圈圈从中心荡出去 */
+function kbFlowRadial(cols, opts){
+  const o=opts||{}, sp=o.speed==null?0.3:o.speed, sc=o.scale==null?0.75:o.scale;
+  return t=>eachKey((r,c)=>
+    bandAt(cols, Math.hypot((c-7.5)/7.5,(r-2.5)/2.5)*sc - (t||0)*sp)); }
+/** 软边扫描：一道有渐隐拖尾的光带来回扫，不是硬边的一列 */
+function kbSweepSoft(base, hi, opts){
+  const o=opts||{}, sp=o.speed==null?0.45:o.speed, w=o.width==null?4.5:o.width;
+  return t=>eachKey((r,c)=>{
+    const ph=((t||0)*sp)%2, x=(ph<1?ph:2-ph)*15;
+    const k=Math.max(0, 1-Math.abs(c-x)/w);
+    return full(mix(base, hi, smoothstep(k))); }); }
+
+/* 单色场 + 重点键 */
+function kbField(base, accents){
+  return ()=>eachKey((r,c)=>{ const led=KB_MAP[r][c];
+    return full((accents && accents[led]) ? accents[led] : base); }); }
+
+
+/* ══════ 主题库 ══════
+   每个主题 = 点阵静态图 + 点阵动画 + 键盘逐键静态 + 键盘逐键动画
+   静态模式：两边都定格；动态模式：两边一起动。                       */
+const PIKA_KB=["kyyyyyyyyyyyyyyk","yyyyyyyyyyyyyy..","yyyyyyyyyyyyyyy.",
+               "yYYYYYYYYYYYYy..","rYYYYYYYYYYYYr..","yyy.y....yyyyyyy"];
+/* Claude：深锈边框 → 橙主体 → 中间两行提亮，纯橙渐变不掺白 */
+const CLAUDE_KB=["nnnnnnnnnnnnnnnn","noooooooooooon..","noOOOOOOOOOOOoo.",
+                 "noOOOOOOOOOOOo..","noooooooooooon..","nnn.o....nnnnnn."];
+/* 吃豆人：深蓝迷宫 + 暗琥珀豆子（原来是白豆，太刺眼）+ 中间一条黄色通道 */
+const PAC_KB=["eeeeeeeeeeeeeeee","bdbdbdbdbdbdbd..","eyyyyyyyyyyyyye.",
+              "bdbdbdbdbdbdbd..","eeeeeeeeeeeeee..","eee.y....eeeeeee"];
+const INV_KB=["gggggggggggggggg","eggeggeggeggegg.","egeegeegeegeeg..",
+              "eggeggeggeggeg..","egeegeegeegeeg..","eee.g....egegegg"];
+const TET_KB=["aabbmmyyggvvrraa","aabbmmyyggvvrr..","aabbmmyyggvvrra.",
+              "aabbmmyyggvvrr..","aabbmmyyggvvrr..","aab.m....vvrraa."];
+/* 哆啦A梦：白肚皮换成淡蓝，空格键红色当铃铛 */
+const DORA_KB=["bbbbbbbbbbbbbbbb","bllllllllllllb..","bllllllllllllll.",
+               "bllllllllllllb..","bllllllllllllb..","bbb.r....bbbbbbb"];
+const MTX_KB=["eeeeeeeeeeeeeeee","eeeeeeeeeeeeee..","eeeeeeeeeeeeeee.",
+              "eeeeeeeeeeeeee..","eeeeeeeeeeeeee..","eee.e....eeeeeee"];
+/* 精灵球：键盘天然分上下，上半红 / 中间一条灰带 / 下半深灰 */
+const BALL_KB=["rrrrrrrrrrrrrrrr","rrrrrrrrrrrrrr..","SSSSSSSSSSSSSSS.",
+               "ssssssssssssss..","ssssssssssssss..","sss.S....ssssss."];
+/* 马里奥：红帽 + 蓝背带裤，中间一条肤色带 */
+const MARIO_KB=["rrrrrrrrrrrrrrrr","rrrrrrrrrrrrrr..","OOOOOOOOOOOOOOO.",
+                "bbbbbbbbbbbbbb..","bbbbbbbbbbbbbb..","bbb.O....bbbbbb."];
+/* 史莱姆：上青下蓝的垂直渐变 */
+const SLIME_KB=["AAAAAAAAAAAAAAAA","aaaaaaaaaaaaaa..","aaaaaaaaaaaaaaa.",
+                "bbbbbbbbbbbbbb..","bbbbbbbbbbbbbb..","bbb.b....bbbbbb."];
+/* 岩浆：底部炽热向上转暗 */
+const LAVA_KB=["kkkkkkkkkkkkkkkk","nnnnnnnnnnnnnn..","rrrrrrrrrrrrrrr.",
+               "mmmmmmmmmmmmmm..","yyyyyyyyyyyyyy..","YYY.Y....YYYYYY."];
+
+const THEMES={
+  pikachu:{ name:"皮卡丘", light:[255,200,0],
+    dot:[".y..y.","yyyyyy","y.yy.y","ryyyyr","yy..yy",".yyyy."],
+    /* 皮卡丘自己动：耳朵抖 -> 眨眼 -> 腮红放电。一个 4.2 秒的循环，
+       键盘不再画闪电（压在脸上很丑），只做同步的静电微闪。 */
+    dotAnim:t=>{
+      const T=4.2, ph=t%T;
+      const twitch = ph>1.05 && ph<1.38;
+      const blink  = ph>2.30 && ph<2.54;
+      const spark  = ph>3.15 && ph<3.78;
+      const Y=[255,205,0], R=[255,58,58], W=[255,246,186];
+      const g=blank();
+      const eL = twitch?0:1, eR = twitch?5:4;               // 耳朵抖一下
+      g[0][eL]=Y.slice(); g[0][eR]=Y.slice();
+      for(let c=0;c<6;c++){ g[1][c]=Y.slice(); g[2][c]=Y.slice(); g[3][c]=Y.slice(); }
+      if(!blink){ g[2][1]=[0,0,0]; g[2][4]=[0,0,0]; }       // 睁眼时挖出眼珠
+      g[3][0]=R.slice(); g[3][5]=R.slice();                 // 腮红
+      g[4][0]=Y.slice(); g[4][1]=Y.slice(); g[4][4]=Y.slice(); g[4][5]=Y.slice();
+      for(let c=1;c<5;c++) g[5][c]=Y.slice();
+      if(spark){                                            // 腮红噼啪放电
+        const k=0.35+0.65*Math.abs(Math.sin(t*38));
+        g[3][0]=mix(R,W,k); g[3][5]=mix(R,W,k);
+        g[2][0]=mix(Y,W,k*0.8); g[2][5]=mix(Y,W,k*0.8);
+      }
+      return g; },
+    kb: kbCaps([255,220,0],[112,96,0],[255,45,35]),
+    kbAnim:(()=>{ const base=kbCaps([255,220,0],[112,96,0],[255,45,35]);
+      return t=>{ const ph=t%4.2, spark = ph>3.15 && ph<3.78;
+        const f=base(t);
+        if(!spark) return f;
+        const k=0.28*Math.abs(Math.sin(t*38));          // 皮卡丘放电时整块跟着闪一下
+        return f.map(c=>mix(c,[255,250,215],k)); }; })() },
+
+  claude:{ name:"Claude 章鱼", light:[255,100,0],
+    dot:["..oo..",".oooo.","o.oo.o","oooooo",".o.o.o","o.o.o."],
+    dotAnim:t=>{                                   // 触手摆动 + 头部呼吸
+      const b=0.75+0.25*Math.sin(t*1.8);
+      /* 头 / 身 / 触手用同一橙色的三个明度，不掺白 ——
+         之前头部两行用了奶白 [242,228,210]，在灯上就是一顶白帽子。 */
+      const HEAD=[255,158,45], BODY=[255,100,0], TENT=[196,58,0];
+      const g=blank();
+      [["..oo..",0],[".oooo.",1],["o.oo.o",2],["oooooo",3]].forEach(([row,r])=>
+        [...row].forEach((ch,c)=>{ if(ch==="o") g[r][c]=mix([0,0,0], r<2?HEAD:BODY, b); }));
+      for(let c=0;c<6;c++){                        // 两行触手错相摆动
+        const s=Math.sin(t*3.4+c*1.1);
+        if(s>0)   g[4][c]=mix([0,0,0],TENT,0.5+0.5*s);
+        if(s<=0)  g[5][c]=mix([0,0,0],TENT,0.5-0.5*s);
+      }
+      return g; },
+    /* 章鱼 = 墨在水里化开，所以用径向而不是分区：中心暖亮，向四周沉成深锈 */
+    kb: kbRadial([255,100,0],[70,12,0],{power:0.85}),
+    kbAnim: kbRadial([255,150,25],[80,16,0],{power:0.85, pulse:1.4}) },
+
+  pacman:{ name:"吃豆人", light:[255,210,0],
+    dot:[".yyyy.","yyyyyy","yyy...","yyy...","yyyyyy",".yyyy."],
+    dotAnim:t=>{                                   // 张嘴闭嘴
+      const open=(Math.sin(t*7)+1)/2;
+      return eachDot((r,c)=>{
+        const dx=c-2.5, dy=r-2.5, d=Math.hypot(dx,dy);
+        if(d>3.1) return [0,0,0];
+        const ang=Math.abs(Math.atan2(dy,dx));
+        return (ang < open*0.75 && dx>0) ? [0,0,0] : [255,210,0];
+      }); },
+    // 深蓝迷宫场，黄色只给方向键和 ESC —— 铺满一整行黄反而看不出是吃豆人
+    /* 左边还是迷宫深蓝，右边是已经被吃亮的区域，中间一条渐变过渡 */
+    kb: kbSplit([6,16,90],[255,190,0],8.5,3.5),
+    kbAnim:(()=>{ const acc={[KEY.UP]:1,[KEY.LEFT]:1,[KEY.DOWN]:1,[KEY.RIGHT]:1,[KEY.ESC]:1};
+      return t=>{ const x=((t*3.4)%20)-2;          // 一颗黄点从左吃到右
+        return eachKey((r,c)=>{ const led=KB_MAP[r][c];
+          if(acc[led]) return [255,205,0];
+          const d=Math.abs(c-x)+Math.abs(r-2.5)*1.3;
+          if(d<1.7) return mix([18,34,110],[255,225,60],1-d/1.7);
+          return [18,34,110]; }); }; })() },
+
+  doraemon:{ name:"哆啦A梦", light:[32,112,232],
+    dot:[".bbbb.","bllllb","l.ll.l","llrrll","llllll",".llll."],
+    dotAnim: t=>{ const g=rows2rgb([".bbbb.","bllllb","l.ll.l","llrrll","llllll",".llll."]);
+      if((t%3.4)>3.1){ g[2][1]=PAL.l.slice(); g[2][4]=PAL.l.slice(); }   // 眨眼
+      const b=0.7+0.3*Math.sin(t*2.4);
+      g[3][2]=mix([0,0,0],[255,45,40],b); g[3][3]=mix([0,0,0],[255,45,40],b);
+      return g; },
+    // 蓝场 + 空格键当红铃铛。原来那版横向蓝白分带看着只是条纹，不像哆啦A梦
+    kb: kbCaps([0,120,255],[0,32,120],[255,40,30]),
+    kbAnim:(()=>{ const acc={[KEY.SPACE]:1};
+      return t=>eachKey((r,c)=>{ const led=KB_MAP[r][c];
+        const b=0.55+0.45*Math.sin(t*2.2);
+        if(acc[led]) return [clamp(255*b),clamp(58*b),clamp(48*b)];
+        const w=0.72+0.28*Math.sin(t*1.6-c*0.28);
+        return [clamp(30*w),clamp(108*w),clamp(228*w)]; }); })() },
+
+  pokeball:{ name:"精灵球", light:[232,45,36],
+    dot:[".rrrr.","rrrrrr","rrrrrr","ssSSss","ssssss",".ssss."],
+    dotAnim:t=>{ const g=rows2rgb([".rrrr.","rrrrrr","rrrrrr","ssSSss","ssssss",".ssss."]);
+      const b=0.25+0.75*Math.pow(Math.abs(Math.sin(t*2.6)),3);
+      g[3][2]=mix([40,40,50],[255,240,200],b); g[3][3]=mix([40,40,50],[255,240,200],b);
+      return g; },
+    kb: kbCaps([255,35,40],[46,46,56],[205,205,215]),
+    kbAnim:(()=>{ const acc={[KEY.SPACE]:1};
+      return t=>{ const flash=Math.pow(Math.abs(Math.sin(t*1.9)),4);
+        return eachKey((r,c)=>{ const led=KB_MAP[r][c];
+          if(acc[led]) return mix([145,145,158],[255,245,215],flash);
+          const k=0.7+0.3*Math.sin(t*1.9);
+          return [clamp(228*k),clamp(42*k),clamp(34*k)]; }); }; })() },
+
+  lava:{ name:"岩浆", light:[255,95,10],
+    dot:["...m..","..mm..",".myym.","myyyym","myrrym",".mrrm."],
+    dotAnim:t=>ANIMS.fire(t),
+    // 横向渐变：左边冷却的暗红 -> 右边炽白金。16 列足够平滑，不会变成条纹
+    kb: kbGrad([[0,[70,8,3]],[0.42,[205,42,8]],[0.78,[255,118,10]],[1,[255,198,62]]]),
+    kbAnim: kbDiag([90,12,0],[255,210,60],0.55,0.30) },
+
+  aurora:{ name:"极光", light:[40,210,180],
+    dot:["..aa..",".aGa..","aGGaa.",".aGGa.","..aGa.","...a.."],
+    dotAnim:t=>eachDot((r,c)=>{
+      const v=Math.sin(c*0.8+t*1.6)+Math.sin(r*1.1-t*1.1);
+      return hsv(150+v*38, 0.85, Math.max(0,0.35+0.65*Math.sin(v*1.4+t))); }),
+    kb: kbGrad([[0,[0,145,195]],[0.38,[26,215,150]],[0.72,[85,118,232]],[1,[148,58,228]]]),
+    kbAnim: kbGradMove([[0,[0,145,195]],[0.38,[26,215,150]],[0.72,[85,118,232]],[1,[148,58,228]]],0.08) },
+
+  sunset:{ name:"落日", light:[255,120,60],
+    dot:["......","..mm..",".mmmm.","mmmmmm","rrrrrr","nnnnnn"],
+    dotAnim:t=>{ const g=blank();
+      const y=2.2+1.1*Math.sin(t*0.7);            // 太阳缓慢起落
+      for(let r=0;r<6;r++) for(let c=0;c<6;c++){
+        const d=Math.hypot((c-2.5)*0.9, r-y);
+        g[r][c] = d<2.2 ? mix([255,205,80],[255,90,30],d/2.2)
+                        : mix([70,20,60],[15,8,25], Math.min(1,(r)/5)); }
+      return g; },
+    kb: kbGrad([[0,[72,26,112]],[0.38,[214,66,86]],[0.74,[255,128,38]],[1,[255,202,78]]]),
+    kbAnim: kbGradMove([[0,[72,26,112]],[0.38,[214,66,86]],[0.74,[255,128,38]],[1,[255,202,78]]],0.06) },
+
+  matrix:{ name:"数字雨", light:[30,230,80],
+    dot:["g.....",".g...g","..g.g.","g..g..",".g...g","...g.."],
+    dotAnim:t=>{ const g=blank();
+      for(let c=0;c<6;c++){ const off=(c*2.7)%6, y=(t*4+off)%8;
+        for(let k=0;k<3;k++){ const r=Math.floor(y)-k;
+          if(r>=0&&r<6) g[r][c]=[0,clamp(255*(1-k/3)),clamp(90*(1-k/3))]; } }
+      return g; },
+    // 静态时也留一层暗绿底 + 方向键亮绿，不然整块全黑等于没主题
+    kb: kbCaps([6,70,22],[2,14,6],[60,255,110]),
+    kbAnim: kbFall([6,26,12],[70,255,120],1.9,3.6) },
+
+  /* 循环型主题：点阵屏轮播内容，键盘配色跟着内容走 —— 这个结构比在键盘上画角色好用得多 */
+  emoji:{ name:"表情包", light:[255,205,20],
+    dot:["......",".y..y.","......","y....y",".yyyy.","......"],
+    dotAnim:t=>{ const M=MOODS, m=M[Math.floor(t/MOOD_T)%M.length], g=blank();
+      m.face.forEach((row,r)=>[...row].forEach((ch,c)=>{
+        if(ch==="X") g[r][c]=m.col.slice();
+        else if(ch==="o") g[r][c]=mix([0,0,0], m.col, 0.35); }));
+      return g; },
+    kb:()=>kbField(MOODS[0].col,{})(),
+    kbAnim:t=>{ const M=MOODS, f=t/MOOD_T, i=Math.floor(f)%M.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.25);       // 换表情时颜色平滑过渡
+      return kbField(mix(M[(i-1+M.length)%M.length].col, M[i].col, k),{})(); } },
+
+  weather:{ name:"天气", light:[110,180,240],
+    dot:["..yy..",".yyyy.","yyyyyy",".yyyy.","..yy..","......"],
+    dotAnim:t=>WEATHER[Math.floor(t/3.4)%WEATHER.length].draw(t),
+    kb:()=>kbField(WEATHER[0].col,{})(),
+    kbAnim:t=>{ const f=t/3.4, i=Math.floor(f)%WEATHER.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.25);
+      return kbField(mix(WEATHER[(i-1+WEATHER.length)%WEATHER.length].col, WEATHER[i].col, k),{})(); } },
+
+  /* 可爱动物：脸放点阵屏，键盘只取它的毛色 */
+  shiba:{ name:"柴犬", light:[226,140,58],
+    dot:["o....o","oooooo","o.oo.o","oOOOOo","oO..Oo",".OOOO."],
+    dotAnim:t=>{ const g=rows2rgb(["o....o","oooooo","o.oo.o","oOOOOo","oO..Oo",".OOOO."]);
+      if((t%3.6)>3.3){ g[2][1]=PAL.o.slice(); g[2][4]=PAL.o.slice(); }      // 眨眼
+      if((t%5)>3.9){ g[5][2]=[255,90,120]; g[5][3]=[255,90,120]; }          // 吐舌
+      return g; },
+    kb: kbCaps([255,120,15],[95,34,0],[255,190,55]),
+    kbAnim: kbCaps([255,120,15],[95,34,0],[255,190,55],{breathe:1.1}) },
+
+  panda:{ name:"熊猫", light:[120,140,165],
+    dot:["s....s","llllll","lsllsl","lsllsl","llssll",".llll."],
+    dotAnim:t=>{ const g=rows2rgb(["s....s","llllll","lsllsl","lsllsl","llssll",".llll."]);
+      const chew=Math.sin(t*4)>0;                                          // 嚼竹子
+      g[4][2]=chew?[60,62,74]:PAL.l.slice(); g[4][3]=chew?[60,62,74]:PAL.l.slice();
+      return g; },
+    kb: kbCaps([54,78,120],[10,12,20],[120,180,255]),
+    kbAnim:t=>{ const b=0.72+0.28*Math.sin(t*1.3);
+      return kbField([clamp(58*b),clamp(72*b),clamp(96*b)],
+        {[KEY.SPACE]:[150,175,205],[KEY.ESC]:[150,175,205]})(); } },
+
+  penguin:{ name:"企鹅", light:[45,70,110],
+    dot:["..ss..",".ssss.","s.ss.s",".smms.","slllls",".m..m."],
+    dotAnim:t=>rows2rgb(["..ss..",".ssss.","s.ss.s",".smms.","slllls",
+      Math.sin(t*2.2)>0 ? "m...m." : ".m..m."]),                            // 左右摇摆
+    kb: kbCaps([16,34,90],[5,7,16],[255,140,0]),
+    kbAnim:t=>{ const w=0.7+0.3*Math.sin(t*1.5);
+      return kbField([clamp(28*w),clamp(42*w),clamp(72*w)],
+        {[KEY.SPACE]:[255,150,20],[KEY.LEFT]:[255,150,20],[KEY.RIGHT]:[255,150,20]})(); } },
+
+  jelly:{ name:"水母", light:[210,90,225],
+    dot:["..pp..",".pppp.","pppppp","p.pp.p",".v.v.v","v.v.v."],
+    dotAnim:t=>{ const g=blank(), b=0.7+0.3*Math.sin(t*1.9);
+      [["..pp..",0],[".pppp.",1],["pppppp",2],["p.pp.p",3]].forEach(x=>
+        [...x[0]].forEach((ch,c)=>{ if(ch==="p") g[x[1]][c]=mix([0,0,0],[235,105,215],b); }));
+      for(let c=0;c<6;c++){ const sw=Math.sin(t*3.1+c*1.05);                // 触手飘
+        if(sw>0) g[4][c]=mix([0,0,0],[150,70,240],0.45+0.55*sw);
+        else     g[5][c]=mix([0,0,0],[150,70,240],0.45-0.55*sw); }
+      return g; },
+    kb: kbGrad([[0,[60,20,110]],[0.45,[190,60,200]],[1,[255,150,220]]]),
+    kbAnim: kbGradMove([[0,[60,20,110]],[0.45,[190,60,200]],[1,[255,150,220]]],0.09) },
+
+  starry:{ name:"星空", light:[40,60,150],
+    dot:[".....y","..y...","y....y","...y..",".y...y","....y."],
+    dotAnim:t=>eachDot((r,c)=>{                                             // 星星各自闪
+      const ph=Math.sin(t*1.7 + (r*6+c)*2.399);
+      return ph>0.72 ? mix([2,4,18],[255,245,210],(ph-0.72)/0.28) : [2,4,18]; }),
+    kb: kbField([14,26,78], {}, 0.35),
+    kbAnim:t=>eachKey((r,c)=>{ const s=Math.sin(t*1.4 + (r*16+c)*2.399);
+      return s>0.88 ? mix([14,26,78],[190,205,255],(s-0.88)/0.12) : [14,26,78]; }) },
+
+  miku:{ name:"初音", light:[0,235,205],
+    dot:["....tt","...t.t","...t..","...t..",".ttt..",".ttt.."],
+    dotAnim:t=>{                                   // 音符上下轻跳 + 尾巴摆
+      const g=blank(), up=Math.sin(t*3.2)>0?0:1;
+      const art=["....tt","...t.t","...t..","...t..",".ttt..",".ttt.."];
+      art.forEach((row,r)=>[...row].forEach((ch,c)=>{
+        const rr=r-up; if(ch==="t"&&rr>=0) g[rr][c]=[0,235,205]; }));
+      for(let c=0;c<6;c++){                        // 底部一条起伏的声波
+        const h=Math.abs(Math.sin(t*4+c*0.9));
+        if(h>0.55) g[5][c]=[0,clamp(200*h),clamp(180*h)];
+      }
+      return g; },
+    /* 葱色 alpha / 深海青 mod / 领带的洋红做点缀 */
+    kb: kbCaps([0,235,205],[0,58,50],[255,60,130]),
+    kbAnim: kbCaps([0,235,205],[0,52,58],[255,60,130],{wave:0.45}) },
+
+  veggie:{ name:"蔬菜", light:[255,110,0],
+    dot:[".g.g..","..g.g.",".oooo.",".oooo.","..oo..","..o..."],
+    dotAnim:t=>{ const it=VEGGIES[Math.floor(t/3.2)%VEGGIES.length];
+      const g=rows2rgb(it.art), b=0.86+0.14*Math.sin(t*2.4);
+      return g.map(row=>row.map(c=>[clamp(c[0]*b),clamp(c[1]*b),clamp(c[2]*b)])); },
+    kb:()=>kbCaps(VEGGIES[0].col, VEGGIES[0].col.map(v=>v*0.22), VEGGIES[0].hi)(),
+    kbAnim:t=>{ const T=VEGGIES, f=t/3.2, i=Math.floor(f)%T.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);      // 换一张时配色平滑过渡
+      const col=mix(T[(i-1+T.length)%T.length].col, T[i].col, k);
+      const hi =mix(T[(i-1+T.length)%T.length].hi,  T[i].hi,  k);
+      return kbCaps(col, col.map(v=>v*0.22), hi)(); } },
+
+  fruit:{ name:"水果", light:[255,45,40],
+    dot:["..g...",".rrrr.","rrrrrr","rrrrrr","rrrrrr",".rrrr."],
+    dotAnim:t=>{ const it=FRUITS[Math.floor(t/3.2)%FRUITS.length];
+      const g=rows2rgb(it.art), b=0.86+0.14*Math.sin(t*2.4);
+      return g.map(row=>row.map(c=>[clamp(c[0]*b),clamp(c[1]*b),clamp(c[2]*b)])); },
+    kb:()=>kbCaps(FRUITS[0].col, FRUITS[0].col.map(v=>v*0.22), FRUITS[0].hi)(),
+    kbAnim:t=>{ const T=FRUITS, f=t/3.2, i=Math.floor(f)%T.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);      // 换一张时配色平滑过渡
+      const col=mix(T[(i-1+T.length)%T.length].col, T[i].col, k);
+      const hi =mix(T[(i-1+T.length)%T.length].hi,  T[i].hi,  k);
+      return kbCaps(col, col.map(v=>v*0.22), hi)(); } },
+
+  animal:{ name:"动物", light:[255,120,10],
+    dot:["o....o",".oooo.","o.oo.o","oooooo",".OrrO.","..OO.."],
+    dotAnim:t=>{ const it=ANIMALS[Math.floor(t/3.2)%ANIMALS.length];
+      const g=rows2rgb(it.art), b=0.86+0.14*Math.sin(t*2.4);
+      return g.map(row=>row.map(c=>[clamp(c[0]*b),clamp(c[1]*b),clamp(c[2]*b)])); },
+    kb:()=>kbCaps(ANIMALS[0].col, ANIMALS[0].col.map(v=>v*0.22), ANIMALS[0].hi)(),
+    kbAnim:t=>{ const T=ANIMALS, f=t/3.2, i=Math.floor(f)%T.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);      // 换一张时配色平滑过渡
+      const col=mix(T[(i-1+T.length)%T.length].col, T[i].col, k);
+      const hi =mix(T[(i-1+T.length)%T.length].hi,  T[i].hi,  k);
+      return kbCaps(col, col.map(v=>v*0.22), hi)(); } },
+
+  eva01:{ name:"EVA 初号机", light:[150,40,255],
+    dot:["..LL..",".vvvv.","vvvvvv","vLvvLv","vvvvvv",".vvvv."],
+    dotAnim:t=>{                                   // 双眼发光 -> 暴走时整张脸泛绿
+      const g=rows2rgb(["..LL..",".vvvv.","vvvvvv","vLvvLv","vvvvvv",".vvvv."]);
+      const rage=(t%6.5)>5.3;
+      const b=0.55+0.45*Math.abs(Math.sin(t*3.2));
+      g[3][1]=mix([40,10,80],[60,255,0],b); g[3][4]=mix([40,10,80],[60,255,0],b);
+      g[0][2]=mix([40,10,80],[60,255,0],b); g[0][3]=mix([40,10,80],[60,255,0],b);
+      if(rage) for(let r=0;r<6;r++) for(let c=0;c<6;c++)
+        if(g[r][c][0]+g[r][c][1]+g[r][c][2]>20) g[r][c]=mix(g[r][c],[60,255,0],0.55);
+      return g; },
+    /* 寓意：A.T. 立场 —— 紫色机体上展开的黄绿色菱形障壁。紫 275° vs 黄绿 90°，差 185° */
+    kb: kbDiamond([150,40,255],[60,255,0],4,0),
+    kbAnim: kbFlow([[150,40,255],[60,255,0],[150,40,255],[90,0,255]],
+             {dx:1, dy:0.7, speed:0.21, wobble:0.05}) },
+
+  eva00:{ name:"EVA 零号机", light:[255,130,0],
+    dot:["..oo..",".oooo.","oooooo","o.aa.o","oooooo",".oooo."],
+    dotAnim:t=>{                                   // 独眼左右扫视
+      const g=rows2rgb(["..oo..",".oooo.","oooooo","oooooo","oooooo",".oooo."]);
+      const ph=(t*0.9)%2, x=Math.round((ph<1?ph:2-ph)*3)+1;
+      g[3][x]=[0,220,255]; if(x+1<6) g[3][x+1]=[0,220,255];
+      return g; },
+    /* 寓意：独眼扫描 —— 橙黄机体上一道青色的目光来回扫。橙 30° vs 青 190°，差 160° */
+    kb: kbScanCol([255,130,0],[0,220,255],0,1.8),
+    kbAnim: kbSweepSoft([255,130,0],[0,220,255],{speed:0.4, width:4.5}) },
+
+  minecraft:{ name:"我的世界", light:[60,220,40],
+    dot:["gggggg","gLggLg","BBBBBB","BnBBnB","BBBnBB","BBBBBB"],
+    dotAnim:t=>{                                   // 方块轮播；轮到苦力怕就嘶嘶闪白后炸开
+      const i=Math.floor(t/3.4)%MCBLOCKS.length, b=MCBLOCKS[i], ph=(t%3.4);
+      if(b.n==="苦力怕" && ph>2.35){
+        const k=(ph-2.35)/1.05;
+        if(k<0.72){                                // 充能：整块越闪越快
+          const f=Math.abs(Math.sin(k*k*70));
+          return rows2rgb(b.art).map(row=>row.map(c=>mix(c,[255,255,210],f*0.85)));
+        }
+        const e=(k-0.72)/0.28;                     // 爆炸：亮环向外扩
+        return eachDot((r,c)=>{
+          const d=Math.hypot(c-2.5,r-2.5);
+          return Math.abs(d-e*3.6)<1.1 ? mix([255,220,60],[255,80,0],e) : [0,0,0]; });
+      }
+      return rows2rgb(b.art); },
+    /* 寓意：草方块的分层 —— 上面是草，下面是泥土，纵向流动 */
+    kb:()=>kbFlow([MCBLOCKS[0].col, MCBLOCKS[0].hi, MCBLOCKS[0].col],{dx:0,dy:1,speed:0})(0),
+    kbAnim:t=>{ const f=t/3.4, i=Math.floor(f)%MCBLOCKS.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);
+      const P=MCBLOCKS[(i-1+MCBLOCKS.length)%MCBLOCKS.length], C=MCBLOCKS[i];
+      const a=mix(P.col,C.col,k), b=mix(P.hi,C.hi,k);
+      const ph=(t%3.4);
+      if(C.n==="苦力怕" && ph>3.07)                // 爆炸时整块键盘跟着闪
+        return kbFlow([[255,240,180],[255,120,0],[255,240,180]],{dx:1,dy:0.4,speed:2.4})(t);
+      return kbFlow([a,b,a],{dx:0,dy:1,speed:0.17})(t); } },
+
+  heartbeat:{ name:"心跳", light:[235,40,60],
+    dot:["rr..rr","rrrrrr","rrrrrr",".rrrr.","..rr..","......"],
+    dotAnim:t=>{ const ph=(t*1.9)%1;
+      const b=ph<.12?.4+.6*(ph/.12):ph<.26?1-.5*((ph-.12)/.14)
+             :ph<.38?.5+.5*((ph-.26)/.12):.4+.6*Math.max(0,1-(ph-.38)/.4);
+      const g=blank();
+      ["rr..rr","rrrrrr","rrrrrr",".rrrr.","..rr..","......"].forEach((row,r)=>
+        [...row].forEach((ch,c)=>{ if(ch==="r") g[r][c]=[clamp(240*b),clamp(40*b),clamp(52*b)]; }));
+      return g; },
+    kb: kbCaps([120,0,18],[26,0,6],[255,45,55]),
+    kbAnim: kbCaps([120,0,18],[26,0,6],[255,45,55],{breathe:1.9}) }
+};
+
+/* 表情素材：X = 主色，o = 半亮。键盘配色跟着当前表情的情绪走 */
+const MOOD_T=2.6;
+const MOODS=[
+  {n:"笑",   col:[255,205,20], face:["......",".X..X.","......","X....X",".XXXX.","......"]},
+  {n:"眨眼", col:[255,155,30], face:["......",".X....","....XX","X....X",".XXXX.","......"]},
+  {n:"惊讶", col:[0,190,230],  face:["......",".X..X.","......","..XX..","..XX..","......"]},
+  {n:"心动", col:[255,85,155], face:["......","XX..XX",".X..X.","......",".XXXX.","......"]},
+  {n:"生气", col:[255,55,40],  face:["XX..XX",".X..X.","......",".XXXX.","X....X","......"]},
+  {n:"睡觉", col:[110,90,235], face:["......","XX..XX","......","....XX","...XX.","..XXX."]},
+  {n:"哭",   col:[60,125,240], face:["......",".X..X.",".o..o.","......",".XXXX.","X....X"]},
+  {n:"无语", col:[125,145,125],face:["......",".X..X.","......","......",".XXXX.","......"]}
+];
+/* 轮播素材：col = 键盘主色（mod 区自动取它的 22% 明度），hi = 点缀色 */
+const VEGGIES=[
+  {n:"胡萝卜", art:STATICS.carrot,   col:[255,110,0],  hi:[40,220,60]},
+  {n:"西兰花", art:STATICS.broccoli, col:[35,200,55],  hi:[130,245,140]},
+  {n:"茄子",   art:STATICS.eggplant, col:[150,55,240], hi:[40,220,60]},
+  {n:"玉米",   art:STATICS.corn,     col:[255,215,0],  hi:[40,220,60]},
+  {n:"辣椒",   art:STATICS.chili,    col:[255,35,25],  hi:[40,220,60]},
+  {n:"南瓜",   art:STATICS.pumpkin,  col:[255,125,0],  hi:[40,200,60]},
+  {n:"豌豆",   art:STATICS.pea,      col:[60,215,70],  hi:[160,255,150]}
+];
+const FRUITS=[
+  {n:"苹果",   art:STATICS.apple,   col:[255,40,35],  hi:[40,220,60]},
+  {n:"香蕉",   art:STATICS.banana,  col:[255,220,0],  hi:[120,90,20]},
+  {n:"草莓",   art:STATICS.berry,   col:[255,45,70],  hi:[40,220,60]},
+  {n:"葡萄",   art:STATICS.grape,   col:[150,60,245], hi:[40,220,60]},
+  {n:"橙子",   art:STATICS.orange,  col:[255,125,0],  hi:[40,220,60]},
+  {n:"西瓜",   art:STATICS.melon,   col:[255,50,60],  hi:[40,215,60]},
+  {n:"菠萝",   art:STATICS.pineapp, col:[255,205,0],  hi:[40,215,60]},
+  {n:"樱桃",   art:STATICS.cherry,  col:[235,25,55],  hi:[40,220,60]},
+  {n:"柠檬",   art:STATICS.lemon,   col:[255,235,0],  hi:[190,255,90]}
+];
+const ANIMALS=[
+  {n:"狐狸",   art:STATICS.fox,    col:[255,120,10], hi:[255,190,60]},
+  {n:"兔子",   art:STATICS.rabbit, col:[255,95,150], hi:[255,180,205]},
+  {n:"青蛙",   art:STATICS.frog,   col:[45,215,60],  hi:[150,255,150]},
+  {n:"小鸡",   art:STATICS.chick,  col:[255,220,0],  hi:[255,130,0]},
+  {n:"猪",     art:STATICS.pig,    col:[255,110,160],hi:[255,50,60]},
+  {n:"鲸鱼",   art:STATICS.whale,  col:[30,110,255], hi:[0,215,255]},
+  {n:"蜜蜂",   art:STATICS.bee,    col:[255,200,0],  hi:[70,70,80]}
+];
+/* 我的世界方块轮播：col = 键盘主色，hi = 第二色（草/泥、矿石/岩石这种搭配）*/
+const MCBLOCKS=[
+  {n:"草方块", art:STATICS.grass,    col:[60,220,40],  hi:[165,72,0]},
+  {n:"苦力怕", art:STATICS.creeper,  col:[60,230,50],  hi:[20,60,15]},
+  {n:"钻石",   art:STATICS.diamond,  col:[0,225,255],  hi:[0,110,255]},
+  {n:"TNT",    art:STATICS.tnt,      col:[255,35,25],  hi:[255,225,60]},
+  {n:"末影人", art:STATICS.enderman, col:[70,70,90],   hi:[170,0,255]},
+  {n:"火把",   art:STATICS.torch,    col:[255,200,0],  hi:[165,72,0]},
+  {n:"红石",   art:STATICS.redstone, col:[255,20,20],  hi:[110,0,0]},
+  {n:"南瓜灯", art:STATICS.jackol,   col:[255,120,0],  hi:[60,220,40]},
+  {n:"绿宝石", art:STATICS.emerald,  col:[60,255,60],  hi:[0,130,40]}
+];
+/* 天气：晴 / 雨 / 雷 / 雪 循环，键盘取当下天气的色温 */
+const WEATHER=[
+  {n:"晴", col:[255,190,40], draw:t=>{ const g=blank(), R=1.6+0.25*Math.sin(t*3);
+     for(let r=0;r<6;r++) for(let c=0;c<6;c++){ const d=Math.hypot(c-2.5,r-2.5);
+       if(d<R) g[r][c]=[255,205,40];
+       else if(d<R+1.15 && (Math.abs(c-2.5)<0.6||Math.abs(r-2.5)<0.6)) g[r][c]=[255,160,20]; }
+     return g; }},
+  {n:"雨", col:[70,120,190], draw:t=>{ const g=blank();
+     for(let c=0;c<6;c++){ const y=(t*5+c*1.9)%7;
+       for(let k=0;k<2;k++){ const r=Math.floor(y)-k;
+         if(r>=0&&r<6) g[r][c]=[40,clamp(150*(1-k/2)),clamp(240*(1-k/2))]; } }
+     return g; }},
+  {n:"雷", col:[150,120,235], draw:t=>{ const g=blank();
+     for(let c=0;c<6;c++) for(let r=0;r<2;r++) g[r][c]=[70,70,110];
+     if((t%1.4)<0.18) ["...XX.","..XX..",".XXXX.","..XX..",".XX..."].forEach((row,r)=>
+       [...row].forEach((ch,c)=>{ if(ch==="X"&&r+1<6) g[r+1][c]=[255,245,180]; }));
+     return g; }},
+  {n:"雪", col:[130,180,225], draw:t=>{ const g=blank();
+     for(let c=0;c<6;c++){ const r=Math.floor((t*1.8+c*2.3)%8);
+       if(r>=0&&r<6) g[r][c]=[170,210,245]; }
+     return g; }}
+];
+/* ══════════ 每个主题一套独立的键盘构图 ══════════
+   刻意不复用同一种摆法 —— 摆法本身要能说出这个主题是什么。
+   全部满亮度，区分靠色相；整体明暗交给全局亮度滑杆。          */
+/* ══════════ 每个主题的键盘构图 ══════════
+   两条硬规则：
+   ① 摆法必须说得出寓意 —— 说不出就是瞎摆
+   ② 同一主题里两个色的色相差 ≥ 90°，绝不用「同色相不同明度」区分（看不见）  */
+const LAYOUTS={
+  /* 寓意：闪电。黄场 + 电蓝色的闪电形，互补色最大对比（52° vs 210°） */
+  pikachu:{ kb: kbMask([255,215,0], M_BOLT, [0,120,255]),
+    kbAnim: kbMaskFlow([255,215,0], M_BOLT, [0,120,255],[0,255,255], 6) },
+
+  /* 寓意：橙色章鱼浮在深蓝海水里 —— 扇形是从中心射出的触手 */
+  claude:{ kb: kbSector([[255,110,0],[0,70,220],[255,110,0],[0,70,220],
+                         [255,110,0],[0,70,220],[255,110,0],[0,70,220]]),
+    kbAnim: kbFlowRadial([[255,110,0],[255,175,0],[0,70,220],[0,150,255]],
+             {speed:0.34, scale:0.8}) },
+
+  /* 寓意：分界线 = 已被吃掉的进度，会一路往右推 */
+  pacman:{ kb: kbSplit([40,0,255],[255,210,0],7.5,2.0),
+    kbAnim: kbSplit([40,0,255],[255,210,0],-4,2.0,1.6) },
+
+  /* 寓意：脖子上那条红围巾 + 铃铛，横贯整块 */
+  doraemon:{ kb: kbRect([0,110,255], [[0,15,3,3,[255,0,40]]]),
+    kbAnim: kbFlow([[0,110,255],[0,180,255],[255,0,40],[0,110,255]],
+             {dx:0, dy:1, speed:0.18}) },
+
+  /* 寓意：精灵球本体 —— 上半红、下半白、正中一颗按钮 */
+  pokeball:{ kb: kbRect([255,20,35], [[0,15,3,5,[0,225,255]],[7,8,2,3,[255,240,0]]]),
+    kbAnim: kbFlow([[255,20,35],[255,20,35],[255,240,0],[0,225,255],[0,225,255]],
+             {dx:0, dy:1, speed:0.16}) },
+
+  /* 寓意：卷起来的尾巴。橙场 + 深蓝螺旋臂 */
+  shiba:{ kb: kbSpiral([255,90,0],[0,90,255],3.2,0),
+    kbAnim: kbFlow([[255,90,0],[255,200,0],[255,90,0],[0,90,255]],
+             {dx:1, dy:0.55, speed:0.2, wobble:0.06}) },
+
+  /* 寓意：两块黑眼圈。浅青场 + 两块深紫方斑，这是熊猫的全部识别特征 */
+  panda:{ kb: kbMask([0,235,255], M_EYES, [120,0,255]),
+    kbAnim: kbFlow([[0,235,255],[120,0,255],[0,235,255],[150,60,255]],
+             {dx:1, dy:0.8, speed:0.17}) },
+
+  /* 寓意：帝企鹅的橙色胸腹 —— 深蓝身子中间一条橙带 */
+  penguin:{ kb: kbBand([255,140,0],[0,60,235],6,9),
+    kbAnim: kbFlow([[0,60,235],[0,150,255],[255,140,0],[0,60,235]],
+             {dx:1, dy:0, speed:0.19}) },
+
+  /* 寓意：双马尾。两侧各一条到底的葱色宽带，中间是深色的衣服 */
+  miku:{ kb: kbMask([90,0,200], M_TAILS, [0,255,215]),
+    kbAnim: kbFlow([[0,255,215],[0,140,255],[255,0,150],[0,255,215]],
+             {dx:1, dy:0.25, speed:0.24}) },
+
+  /* 寓意：心电图波形 */
+  heartbeat:{ kb: kbShape([255,0,90], ECG, [200,255,0]),
+    kbAnim: kbShape([255,0,90], ECG, [200,255,0], {sweep:0.55}) },
+
+  /* 寓意：字符从上往下掉 */
+  matrix:{ kb: kbFall([0,0,0],[0,255,90],0,3.6),
+    kbAnim: kbFall([0,0,0],[0,255,90],1.9,3.6) },
+
+  /* 寓意：黑色岩壳 + 底下透出来的发光裂缝。熄灭的底 = 最大对比 */
+  lava:{ kb: kbMask([0,0,0], M_CRACK, [255,120,0]),
+    kbAnim: kbMaskFlow([0,0,0], M_CRACK, [255,40,0],[255,220,0], 3.5) },
+
+  /* 寓意：极光就是一条横着铺开的色带 */
+  aurora:{ kb: kbGrad([[0,[0,255,220]],[0.35,[60,255,0]],[0.7,[120,0,255]],[1,[255,0,180]]]),
+    kbAnim: kbGradMove([[0,[0,255,220]],[0.35,[60,255,0]],[0.7,[120,0,255]],[1,[255,0,180]]],0.07) },
+
+  /* 寓意：天空的层次，从头顶的紫到地平线的金 */
+  sunset:{ kb: kbRows([[120,0,255],[255,0,150],[255,0,40],[255,90,0],[255,180,0],[255,240,0]]),
+    kbAnim: kbRowsMove([[120,0,255],[255,0,150],[255,0,40],[255,90,0],[255,180,0],[255,240,0]],0.06) },
+
+  /* 寓意：夜空里零星的星点 */
+  starry:{ kb: kbScatter([25,0,255],[255,230,0],0.88,0),
+    kbAnim: kbScatter([25,0,255],[255,230,0],0.88,1.1) },
+
+  /* 寓意：垂下来的触手，条纹本身是弯的。品红 vs 青，差 125° */
+  jelly:{ kb: kbWave([[255,0,180],[0,220,255]],2.5,2,0),
+    kbAnim: kbFlowRadial([[255,0,180],[150,0,255],[0,220,255],[150,0,255]],
+             {speed:0.26, scale:0.7}) },
+
+  /* 寓意：情绪淹没整张桌子 —— 不做花纹，整块就是当下那个情绪的颜色 */
+  emoji:{ kb:()=>kbField(MOODS[0].col,{})(),
+    kbAnim:t=>{ const f=t/MOOD_T, i=Math.floor(f)%MOODS.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.25);
+      const col=mix(MOODS[(i-1+MOODS.length)%MOODS.length].col, MOODS[i].col, k);
+      return kbFlow([col, hueShift(col,30), col, hueShift(col,-30)],
+               {dx:1,dy:0.3,speed:0.16})(t); } },
+
+  /* 寓意：摆法本身跟着天气走 —— 晴=全场、雨=竖向下落、雷=整块闪、雪=稀疏飘落 */
+  weather:{ kb:()=>kbField(WEATHER[0].col,{})(),
+    kbAnim:t=>{ const i=Math.floor(t/3.4)%WEATHER.length, c=WEATHER[i].col;
+      if(i===0) return kbRadial([255,230,0],[255,90,0],{power:1.1})(t);
+      if(i===1) return kbFall([0,0,60],[0,180,255],2.2,3.0)(t);
+      if(i===2) return kbField((t%1.4)<0.18?[255,240,120]:[70,0,200],{})();
+      return kbScatter([0,60,180],[200,255,255],0.9,0.7)(t); } },
+
+  /* 寓意：菜地的垄。一垄菜色、一垄叶绿，隔条换 */
+  veggie:{ kb:()=>kbStripes([VEGGIES[0].col, VEGGIES[0].hi],2)(),
+    kbAnim:t=>{ const f=t/3.2, i=Math.floor(f)%VEGGIES.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);
+      const P=VEGGIES[(i-1+VEGGIES.length)%VEGGIES.length], C=VEGGIES[i];
+      const a=mix(P.col,C.col,k), b=mix(P.hi,C.hi,k);
+      return kbFlow([a,b,a,hueShift(a,25)],{dx:1,dy:0.3,speed:0.2})(t); } },
+
+  /* 寓意：果子结在树上 —— 绿叶底 + 散落的果色 */
+  fruit:{ kb:()=>kbScatter([30,200,40], FRUITS[0].col, 0.55, 0)(),
+    kbAnim:t=>{ const f=t/3.2, i=Math.floor(f)%FRUITS.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);
+      const c=mix(FRUITS[(i-1+FRUITS.length)%FRUITS.length].col, FRUITS[i].col, k);
+      return kbFlow([[30,200,40],c,[30,200,40],hueShift(c,20)],
+               {dx:1,dy:0.45,speed:0.18})(t); } },
+
+  /* 寓意：毛皮上的斑块 —— 马赛克就是不规则的花纹 */
+  animal:{ kb:()=>kbMosaic([ANIMALS[0].col, hueShift(ANIMALS[0].col,170)],2)(),
+    kbAnim:t=>{ const f=t/3.2, i=Math.floor(f)%ANIMALS.length;
+      const k=Math.min(1,(f-Math.floor(f))/0.3);
+      const c=mix(ANIMALS[(i-1+ANIMALS.length)%ANIMALS.length].col, ANIMALS[i].col, k);
+      return kbFlow([c, hueShift(c,170), c, hueShift(c,90)],
+               {dx:1,dy:0.6,speed:0.19,wobble:0.05})(t); } }
+};
+Object.keys(LAYOUTS).forEach(k=>{ if(THEMES[k]) Object.assign(THEMES[k], LAYOUTS[k]); });
+
+const eachDot=fn=>{ const g=blank();
+  for(let r=0;r<6;r++) for(let c=0;c<6;c++) g[r][c]=fn(r,c); return g; };
+const fireBuf=Array.from({length:7},()=>Array(6).fill(0));
+const ANIMS={
+  plasma:t=>{const g=blank();for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const v=Math.sin(c*.9+t*2)+Math.sin(r*.9-t*1.5)+Math.sin((c+r)*.6+t*2.5);
+    g[r][c]=hsv(v*55+t*45,1,.45+.55*Math.abs(Math.sin(v*1.2)));}return g;},
+  comet:t=>{const g=blank(),n=RING.length;
+    for(let k=0;k<9;k++){const i=(Math.floor(t*15)-k+n*5)%n,[r,c]=RING[i];
+      g[r][c]=hsv(190+k*14,1,Math.pow(1-k/9,2.2));}
+    const b=.25+.75*Math.abs(Math.sin(t*3.5));
+    [[2,2],[2,3],[3,2],[3,3]].forEach(([r,c])=>g[r][c]=[clamp(90*b),clamp(200*b),clamp(255*b)]);return g;},
+  heartbeat:t=>{const ph=(t*2)%1;
+    const b=ph<.14?.35+.65*(ph/.14):ph<.3?1-.45*((ph-.14)/.16):ph<.42?.55+.45*((ph-.3)/.12):.35+.65*Math.max(0,1-(ph-.42)/.35);
+    const g=blank();STATICS.heart.forEach((row,r)=>[...row].forEach((ch,c)=>{
+      if(ch==="r")g[r][c]=[clamp(255*b),clamp(35*b),clamp(45*b)];}));return g;},
+  fire:()=>{for(let r=0;r<6;r++)for(let c=0;c<6;c++){const bl=fireBuf[r+1];
+      fireBuf[r][c]=Math.max(0,(bl[(c+5)%6]+bl[c]*2+bl[(c+1)%6])/4-.055-Math.random()*.045);}
+    for(let c=0;c<6;c++)fireBuf[6][c]=.75+Math.random()*.25;
+    const g=blank();for(let r=0;r<6;r++)for(let c=0;c<6;c++){const v=Math.min(1,fireBuf[r][c]);
+      g[r][c]=[clamp(v*3*255),clamp(Math.max(0,v-.34)*3.4*255),clamp(Math.max(0,v-.78)*4.5*255)];}return g;},
+  rain:t=>{const g=blank();
+    for(let c=0;c<6;c++){const off=(c*2.7)%6,y=(t*4+off)%8;
+      for(let k=0;k<3;k++){const r=Math.floor(y)-k;if(r>=0&&r<6)g[r][c]=[0,clamp(120*(1-k/3)),clamp(255*(1-k/3))];}}return g;},
+  breathe:t=>{const b=.15+.85*(.5+.5*Math.sin(t*1.6));const col=hsv(t*24,.85,b);
+    return Array.from({length:6},()=>Array.from({length:6},()=>col.slice()));},
+  spiral:t=>{const g=blank();
+    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+      const dx=c-2.5,dy=r-2.5,a=Math.atan2(dy,dx),d=Math.hypot(dx,dy);
+      g[r][c]=hsv(a*57+d*70-t*160,1,Math.max(0,1-Math.abs(((d*1.6-t*2.4)%2.2)-1.1)));}return g;}
+};
+const ANIM_NAMES=Object.keys(ANIMS);
+
+/* ═══════════════ 播放引擎 ═══════════════ */
+let stopFn=null, liveFn=null;
+/* vibe 当前画面的签名 + 键盘灯当前用的主题。
+   用来判断「该画的东西变了没有」，没变就不重启循环、不重推灯。 */
+let vibeSig=null, vibeKb=null;
+const FPS=()=>+$("fpsSel").value||15;
+function stopAnim(){ if(stopFn){stopFn();stopFn=null;} liveFn=null; vibeSig=null; }
+function runAnim(fn,fps,ms){
+  stopAnim(); liveFn=fn;
+  let stopped=false,busy=false;const t0=performance.now();
+  const tick=async()=>{ if(stopped)return;
+    if(!busy){ busy=true; try{ await pushMatrix(fn((performance.now()-t0)/1000)); }catch(e){} busy=false; }
+    if(!stopped) setTimeout(tick,1000/fps); };
+  tick();
+  let h=null; if(ms) h=setTimeout(()=>{ stopped=true; stopFn=null; liveFn=null; applyMode(MODE,true); }, ms);
+  stopFn=()=>{ stopped=true; if(h)clearTimeout(h); };
+}
+async function showStatic(rgb){ stopAnim(); try{ await pushMatrix(rgb); }catch(e){} }
+
+/* 背光走推流：进一次流式模式（一次 flash 写），之后全部是 RAM，随便刷 */
+let streamOn=null, lightNow=null;
+/* 键盘没应答时把话说明白 —— 之前是静悄悄什么都不做，看着就像软件坏了 */
+function markAsleep(){
+  awake=false;
+  const st=$("stat"); if(st) st.textContent="键盘没应答（按一下任意键唤醒）";
+  const d=$("dot"); if(d) d.classList.remove("on");
+}
+function markAwake(){
+  if(awake) return;
+  awake=true;
+  const st=$("stat"); if(st && dev) st.textContent=dev.productName;
+  const d=$("dot"); if(d) d.classList.add("on");
+}
+
+/* 电量。服务端那边自己按 45 秒节流，所以这儿 30 秒问一次并不会真去打扰键盘。
+   这东西也是个安全阀：上次把电耗到 9% 掉线，根因之一就是谁都看不见电量。 */
+let battWarned=false;
+async function refreshBatt(){
+  const box=$("batt"); if(!box) return;
+  try{
+    const d = await (await fetch("/kb/power",{cache:"no-store"})).json();
+    if(!d.ok || typeof d.pct!=="number"){ box.hidden=true; return; }
+    box.hidden=false;
+    $("battFill").style.width = Math.max(2, Math.round(d.pct*0.23)) + "px";
+    $("battTxt").textContent = d.pct + "%" + (d.charging ? " 充电中" : "");
+    $("battBolt").hidden = !d.charging;
+    box.classList.toggle("chg", !!d.charging);
+    box.classList.toggle("low", !d.charging && d.pct<=20);
+    box.classList.toggle("mid", !d.charging && d.pct>20 && d.pct<=40);
+    box.title = d.charging ? "键盘电量 "+d.pct+"%，正在充电"
+              : d.pct<=20 ? "键盘电量 "+d.pct+"%，键盘灯已自动关掉省电"
+              : "键盘电量 "+d.pct+"%";
+    if(!d.charging && d.pct<=15 && !battWarned){
+      battWarned=true; popCapsule("键盘电量 "+d.pct+"%，快没电了");
+    }
+    if(d.charging || d.pct>25) battWarned=false;
+  }catch(e){ box.hidden=true; }
+}
+setInterval(refreshBatt, 20000);
+refreshBatt();
+
+async function enterStreamMode(){
+  /* 熄灭 = 写背光模式 0，让固件把 LED 驱动真的关掉。
+     以前只在原厂灯效下才写 0，我们自己的推流模式下「熄灭」只是推一帧全黑继续流着 ——
+     灯是黑的，驱动和推流态都还醒着，电照样掉。 */
+  const want = KB_OFF ? 0 : FW_FX==null ? BL_STREAM : FW_FX;
+  if(streamOn===want) return true;
+  try{ await patchConfig({ blMode:want, blBright:90,
+         blColorful: FW_FX==null?0:1,               // 原厂灯效放开彩色，用它自带的配色
+         dsMode:DS_CUSTOM, dsBright:90 });
+       streamOn=want; return true; }
+  catch(e){ lastErr="进流模式失败: "+String(e&&e.message||e).slice(0,90);
+            markAsleep(); return false; }
+}
+/** 整块铺一个颜色（vibe 状态、番茄钟底色用），零 flash 写入 */
+async function setLight(color, bright){
+  const k=(color?color.join(","):"off")+"/"+bright;
+  if(k===lightNow) return; lightNow=k;
+  await enterStreamMode();
+  const c = (!color||!bright) ? [0,0,0] : color.map(v=>clamp(v*bright/90));
+  try{ await pushKeys(new Array(KB_N).fill(c)); }catch(e){ lightNow=null; }
+}
+async function setSleepMinutes(min){
+  const s=Math.max(60, Math.min(0xFFFFFF, min*60));
+  try{ await patchConfig({sleepL:s&255, sleepM:(s>>8)&255, sleepH:(s>>16)&255});
+       localStorage.setItem("yogo_sleep", String(min)); return true; }
+  catch(e){ return false; }
+}
+
+/* ═══════════════ 模式 ═══════════════ */
+const MODES=[
+  {id:"startup",  name:"启动",       desc:"每天一段不同的动画"},
+  {id:"focus",    name:"专注",       desc:"全灭，什么都不动"},
+  {id:"theme",    name:"主题",       desc:"逐键配色 + 点阵图案"},
+  {id:"pomodoro", name:"番茄钟",     desc:"环 + 进度条，到点跳番茄"},
+  {id:"vibe",     name:"Vibe Coding",desc:"点阵屏＝电子宠物，跟着会话状态"}
+];
+let MODE=localStorage.getItem("yogo_mode")||"theme";
+let THEME=localStorage.getItem("yogo_theme")||"pikachu";
+if(!THEMES[THEME]) THEME="pikachu";                       // 旧存档里的主题名可能已不存在
+let THEME_DYN=localStorage.getItem("yogo_dyn")==="1";
+const THEME_KEYS=Object.keys(THEMES);
+let LAST_RESIDENT=localStorage.getItem("yogo_resident")||"theme";   // 专注/启动 结束后回到这里
+
+/* Claude 模式总开关：关着时这就是个纯键盘灯效工具 —— 没有 vibe、没有胶囊、不问额度。
+   状态存在服务端 settings.json，托盘程序也照它决定胶囊要不要理中键。 */
+let CLAUDE_ON=false;
+function syncClaudeUI(){
+  const b=$("claudeOn");
+  if(b){ b.textContent = CLAUDE_ON ? "开" : "关"; b.classList.toggle("primary", CLAUDE_ON); }
+  const box=$("claudeOnly"); if(box) box.hidden=!CLAUDE_ON;
+  document.querySelectorAll('.mode[data-id="vibe"]').forEach(el=>el.hidden=!CLAUDE_ON);
+  if(!CLAUDE_ON && MODE==="vibe") setMode("theme");
+}
+async function loadClaudeMode(){
+  try{ const d=await (await fetch("/settings",{cache:"no-store"})).json(); CLAUDE_ON=!!d.claude; }
+  catch(e){ CLAUDE_ON=false; }
+  syncClaudeUI();
+}
+const modesEl=$("modes");
+MODES.forEach(m=>{
+  const b=document.createElement("button"); b.className="mode"; b.dataset.id=m.id;
+  b.innerHTML='<b></b><span></span>';
+  b.querySelector("b").textContent=m.name; b.querySelector("span").textContent=m.desc;
+  b.addEventListener("click",()=>{ setMode(m.id); });
+  modesEl.appendChild(b);
+});
+function setMode(id){
+  MODE=id; localStorage.setItem("yogo_mode",id);
+  if(id==="theme"||id==="pomodoro"||id==="vibe"){ LAST_RESIDENT=id; localStorage.setItem("yogo_resident",id); }
+  document.querySelectorAll(".mode").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.id===id)));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.dataset.pane===id));
+  try{ renderDotOwner(); }catch(e){}
+  applyMode(id,false);
+}
+async function applyMode(id, isReattach){
+  if(!dev) return;
+  /* 离开 vibe：别的模式会把键盘灯覆盖掉，所以忘记「灯已经是这个主题了」，
+     下次回 vibe 必须重推一次。 */
+  if(id!=="vibe") vibeKb=null;
+  if(id==="startup"){ playStartup(); return; }
+  if(id==="focus"){ stopAnim(); lightNow=null;
+    await enterStreamMode();
+    try{ await pushKeys(new Array(KB_N).fill([0,0,0])); await pushMatrix(blank()); }catch(e){}
+    $("focusDot").classList.add("on"); $("focusTxt").textContent="已启用"; return; }
+  $("focusDot").classList.remove("on"); $("focusTxt").textContent="未启用";
+  if(id==="theme"){ applyTheme(THEME); return; }
+  if(id==="pomodoro"){ lightNow=null; if(await enterStreamMode()) pomPaint(); return; }
+  if(id==="vibe"){ if(await enterStreamMode()) vibePaint(); return; }
+}
+/** 主题运行器：点阵屏 + 键盘一起驱动。静态 = 低速定格刷新，动态 = 12fps 一起动 */
+function runTheme(t, dyn){
+  stopAnim(); lightNow=null;
+  if(ART_PICK && STATICS[ART_PICK.name]){       // 画廊里挑过图：主题的点阵图让位
+    artPush(STATICS[ART_PICK.name], ART_PICK.idx|0);
+    return;
+  }
+  if(!dyn){
+    /* 静态主题：推一帧就完事，之后零流量。
+       官方 HUB 也是这么干的 —— 图写进设备就不用再管，反复推只是白耗电。
+       （以前这里按 1.2fps 一直刷一张静止的图。） */
+    (async()=>{ try{ await pushKeys(t.kb(0)); await pushMatrix(rows2rgb(t.dot)); }catch(e){} })();
+    liveFn=null;
+    return;
+  }
+  let stopped=false, busy=false; const t0=performance.now();
+  const tick=async()=>{ if(stopped) return;
+    if(!busy){ busy=true;
+      const s=(performance.now()-t0)/1000;
+      try{
+        await pushKeys(t.kbAnim ? t.kbAnim(s) : t.kb(0));
+        await pushMatrix(t.dotAnim ? t.dotAnim(s) : rows2rgb(t.dot));
+      }catch(e){}
+      busy=false; }
+    if(!stopped) setTimeout(tick, 1000/12); };
+  tick();
+  stopFn=()=>{ stopped=true; };
+  liveFn=null;
+}
+async function applyTheme(k){
+  THEME=k; localStorage.setItem("yogo_theme",k);
+  syncPickUI();
+  if(!await enterStreamMode()){ console.warn("applyTheme 中止：", lastErr); return; }
+  markAwake();
+  runTheme(THEMES[k], THEME_DYN);
+}
+
+/* 启动模式：开机检测日期，跨天就换下一个主题 */
+function todayStr(){ const d=new Date();
+  return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function rotateThemeIfNewDay(){
+  const last=localStorage.getItem("yogo_lastDay"), today=todayStr();
+  if(last===today) return false;
+  localStorage.setItem("yogo_lastDay", today);
+  if(last){                                       // 第一次运行不跳，之后每跨一天前进一个
+    THEME=THEME_KEYS[(THEME_KEYS.indexOf(THEME)+1)%THEME_KEYS.length];
+    localStorage.setItem("yogo_theme", THEME);
+  }
+  return true;
+}
+async function playStartup(){
+  const t=THEMES[THEME];
+  $("todayAnim").textContent=t.name;
+  if(!await enterStreamMode()) return;
+  runTheme(t, true);                              // 入场一律跑动态，够热闹
+  setTimeout(()=>{ if(MODE==="startup") setMode(LAST_RESIDENT); }, 12000);
+}
+$("playStartup").addEventListener("click", playStartup);
+rotateThemeIfNewDay();
+$("todayAnim").textContent=THEMES[THEME].name;
+$("fpsSel").addEventListener("change",()=>{ if(liveFn) runAnim(liveFn,FPS()); });
+
+/* ═══════════════ 卡片 ═══════════════ */
+function thumbOf(rgb){ const d=document.createElement("div"); d.className="thumb";
+  rgb.forEach(row=>row.forEach(([R,G,B])=>{ const i=document.createElement("i");
+    const lit=R+G+B>12, hex="#"+[R,G,B].map(v=>clamp(v).toString(16).padStart(2,"0")).join("");
+    i.style.background=lit?hex:"#131120"; if(lit)i.style.boxShadow="0 0 4px "+hex+"99"; d.appendChild(i); }));
+  return d; }
+function chip(parent, inner, text, onClick, key){
+  const b=document.createElement("button"); b.className="chip"; b.setAttribute("aria-pressed","false");
+  if(key) b.dataset.k=key;
+  b.appendChild(inner);
+  const s=document.createElement("span"); s.textContent=text; b.appendChild(s);
+  b.addEventListener("click",onClick); parent.appendChild(b); return b;
+}
+ANIM_NAMES.forEach(n=>{ let pv=ANIMS[n](0.7);
+  if(n==="fire") for(let i=0;i<28;i++) pv=ANIMS.fire();
+  chip($("anims"), thumbOf(pv), n, ()=>{ runAnim(ANIMS[n],FPS()); }); });
+Object.keys(THEMES).forEach(k=>{ const t=THEMES[k];
+  const box=document.createElement("div"); box.style.display="flex"; box.style.flexDirection="column"; box.style.gap="4px";
+  box.appendChild(thumbOf(rows2rgb(t.dot)));
+  const sw=document.createElement("div"); sw.className="swatch";
+  sw.style.background="rgb("+t.light.join(",")+")"; sw.style.boxShadow="0 0 10px rgb("+t.light.join(",")+")";
+  box.appendChild(sw);
+  chip($("themes"), box, t.name, ()=>{
+    ART_PICK=null; localStorage.removeItem("yogo_artpick");   // 换主题 = 换图，画廊覆盖作废
+    setMode("theme"); applyTheme(k); }, k); });
+/** 从字符画里数出主色和次色 —— 用最多的那个色当键盘主色，第二多的当点缀。
+    这样每张单独点阵图都自带一套配色，不用一张张手配。 */
+function paletteOf(rows){
+  const cnt=new Map();
+  rows.forEach(r=>[...r].forEach(ch=>{ if(ch!=="."&&PAL[ch]) cnt.set(ch,(cnt.get(ch)||0)+1); }));
+  const sorted=[...cnt.entries()].sort((a,b)=>b[1]-a[1]);
+  const main = sorted[0] ? PAL[sorted[0][0]].slice() : [255,200,0];
+  const acc  = sorted[1] ? PAL[sorted[1][0]].slice() : hueShift(main,150);
+  return {main, acc};
+}
+/** 单独点阵图的配套灯：摆法按图的序号轮换，配色从图里取主色 + 旋 160° 的对比色。
+    这样 35 张图不会全是一个样子。 */
+const ART_LAYOUTS=[
+  (a,b)=>kbDiagStripes([a,b],3),
+  (a,b)=>kbCheck(a,b,2),
+  (a,b)=>kbStripes([a,b],2),
+  (a,b)=>kbQuad(a,b,b,a),
+  (a,b)=>kbCross(a,b,1.6),
+  (a,b)=>kbCorner(a,b),
+  (a,b)=>kbRows([a,a,b,b,a,a]),
+  (a,b)=>kbMosaic([a,b],2),
+  (a,b)=>kbDiagSplit(a,b,4,2.5),
+  (a,b)=>kbWave([a,b],2.5,2,0),
+  (a,b)=>kbSector([a,b,a,b]),
+  (a,b)=>kbColumnHue(a,150,0)
+];
+let ART_N=0;
+/* 画廊里挑的图是主题模式下的**持久覆盖**：挑了之后主题的点阵图就换成它，
+   控制台关掉再开、键盘重连补推，都还是它。只有点主题卡片才清掉（换主题＝换图）。
+   以前只推一次不记，控制台一关一开就被主题自带的图盖回去了。 */
+let ART_PICK=(()=>{ try{ return JSON.parse(localStorage.getItem("yogo_artpick")||"null"); }catch(e){ return null; } })();
+function artPalette(rows){
+  const q=paletteOf(rows);
+  const a=full(q.main);
+  /* 次色跟主色色相太近就等于看不见，一律换成旋 170° 的强对比色 */
+  let b=full(q.acc);
+  const hu=x=>{const mx=Math.max(...x),mn=Math.min(...x); if(mx===mn)return 0; const d=mx-mn;
+    let h; if(mx===x[0])h=((x[1]-x[2])/d)%6; else if(mx===x[1])h=(x[2]-x[0])/d+2; else h=(x[0]-x[1])/d+4;
+    return ((h*60)+360)%360;};
+  let dh=Math.abs(hu(a)-hu(b)); if(dh>180) dh=360-dh;
+  if(dh<90) b=full(hueShift(a,170));
+  return [a,b];
+}
+function syncPickUI(){
+  const art = ART_PICK && STATICS[ART_PICK.name] ? ART_PICK.name : null;
+  document.querySelectorAll("#themes .chip").forEach(c=>
+    c.setAttribute("aria-pressed", String(!art && c.dataset.k===THEME)));
+  document.querySelectorAll("#statics .chip").forEach(c=>
+    c.setAttribute("aria-pressed", String(!!art && c.dataset.k==="art:"+art)));
+}
+async function artPush(rows, idx){
+  const [a,b]=artPalette(rows);
+  const fn=ART_LAYOUTS[idx%ART_LAYOUTS.length];
+  stopAnim();
+  if(!await enterStreamMode()) return;
+  try{ await pushKeys(fn(a,b)(0)); await pushMatrix(rows2rgb(rows)); }catch(e){}
+}
+async function showArt(name, idx){
+  const rows=STATICS[name]; if(!rows) return;
+  if(idx==null) idx=ART_N++;
+  ART_PICK={name, idx};
+  localStorage.setItem("yogo_artpick", JSON.stringify(ART_PICK));
+  syncPickUI();
+  /* vibe 和番茄钟模式会按自己的节奏一直刷点阵屏（电子宠物、进度环），
+     你点的图会在下一帧被盖掉 —— 表现就是"点了没反应，一直是那只宠物"。
+     所以先退回主题模式，再把图放上去。 */
+  if(MODE==="vibe"||MODE==="pomodoro"){
+    const was=DOT_OWNER[MODE]||MODE;
+    await setMode("theme");           // setMode -> applyTheme -> runTheme 会认 ART_PICK
+    const el=$("dotOwner");
+    if(el) el.innerHTML = '已从<b>'+was+'</b>切回<b>主题模式</b> —— 点阵屏现在归图案管。';
+    return;
+  }
+  await artPush(rows, idx);
+}
+/* ── 点阵屏的归属 ──────────────────────────────────────────────
+   三个模式各自按自己的节奏刷点阵屏：主题=图案，vibe=电子宠物，番茄钟=进度环。
+   以前在 vibe 模式下点画廊，图会被下一帧盖掉，看着就像"点了没反应"。
+   现在把归属摆到明面上：不是主题模式时画廊压暗，点了会明确告诉你切过去了。 */
+const DOT_OWNER = { theme:"主题图案", vibe:"电子宠物", pomodoro:"番茄钟进度环",
+                    focus:"全灭", startup:"开机动画" };
+function renderDotOwner(){
+  const el=$("dotOwner"); if(!el) return;
+  const mine = MODE==="theme";
+  el.innerHTML = mine
+    ? '点阵屏现在归<b>主题图案</b>管 —— 下面的图点了就上屏。'
+    : '点阵屏现在归<b>'+(DOT_OWNER[MODE]||MODE)+'</b>管，'+
+      '所以下面的图点了会先切回<b>主题模式</b>。'+
+      ' <button class="btn" id="dotOwnerGo" style="margin-left:8px">切回主题模式</button>';
+  el.style.opacity = mine ? ".75" : "1";
+  const g=$("statics"); if(g) g.style.opacity = mine ? "1" : ".45";
+  const btn=$("dotOwnerGo");
+  if(btn) btn.addEventListener("click", ()=>setMode("theme"));
+}
+
+let ai=0;
+Object.keys(GALLERY).forEach((cat,ci)=>{
+  const d=document.createElement("details"); d.className="galgrp"; d.open = ci===0;
+  const sm=document.createElement("summary");
+  sm.textContent=cat+"  ("+GALLERY[cat].filter(n=>STATICS[n]).length+")";
+  d.appendChild(sm);
+  const grid=document.createElement("div"); grid.className="chips"; grid.style.marginTop="9px";
+  d.appendChild(grid);
+  GALLERY[cat].forEach(n=>{ if(!STATICS[n]) return;
+    chip(grid, thumbOf(rows2rgb(STATICS[n])), n, ()=>{ showArt(n); }, "art:"+n); });
+  $("statics").appendChild(d);
+});
+renderDotOwner();
+
+/* 键盘灯效来源：我们的逐键配色 vs 原厂内置灯效 */
+(function(){
+  const sel=$("fwSel");
+  const o0=document.createElement("option"); o0.value=""; o0.textContent="主题配色（我们的）";
+  sel.appendChild(o0);
+  BL_MODES.forEach(([v,name,hasColor])=>{
+    if(v===0) return;                              // 「全灭」用旁边的熄灭按钮，不放这
+    const o=document.createElement("option"); o.value=String(v);
+    o.textContent="原厂 · "+name; sel.appendChild(o);
+  });
+  sel.value = FW_FX==null ? "" : String(FW_FX);
+  function hint(){ $("fwHint").textContent = FW_FX==null
+    ? "" : "固件自己跑，用它自带的配色；点阵屏仍然是我们的"; }
+  hint();
+  sel.addEventListener("change", async()=>{
+    FW_FX = sel.value==="" ? null : +sel.value;
+    localStorage.setItem("yogo_fwfx", sel.value);
+    hint(); streamOn=null; lightNow=null;          // 强制重写一次配置
+    repaintNow();
+  });
+})();
+
+/* 静态 / 动态 */
+function syncDynBtn(){
+  $("dynBtn").textContent = THEME_DYN ? "动态" : "静态";
+  $("dynBtn").classList.toggle("primary", THEME_DYN);
+  $("dynHint").textContent = THEME_DYN
+    ? "点阵屏和键盘一起动 · 12fps · 走 RAM 不吃 flash"
+    : "点阵屏和键盘都定格，最省电";
+}
+$("dynBtn").addEventListener("click", ()=>{
+  THEME_DYN=!THEME_DYN; localStorage.setItem("yogo_dyn", THEME_DYN?"1":"0");
+  syncDynBtn(); if(MODE==="theme") applyTheme(THEME); });
+syncDynBtn();
+
+/* 亮度滑杆 —— 软件缩放，拖动即时生效 */
+function repaintNow(){
+  if(MODE==="theme") applyTheme(THEME);
+  else if(MODE==="vibe") vibePaint();
+  else if(MODE==="focus") applyMode("focus");
+  else if(MODE==="pomodoro") applyMode("pomodoro");
+}
+[["dotBr","dotBrV","yogo_dotbr",v=>DOT_BRIGHT=v,()=>DOT_BRIGHT],
+ ["kbBr","kbBrV","yogo_kbbr", v=>KB_BRIGHT=v, ()=>KB_BRIGHT]].forEach(([id,lab,key,set,get])=>{
+  const el=$(id); el.value=String(get()); $(lab).textContent=get()+"%";
+  el.addEventListener("input", ()=>{ set(+el.value); $(lab).textContent=el.value+"%";
+    localStorage.setItem(key, el.value); });
+  el.addEventListener("change", repaintNow);
+});
+
+/* 白平衡校准 */
+let calTest=false;
+const CAL_YELLOW=[255,255,0];                       // R=G 的纯黄，校准基准
+const paintCal=()=>pushKeys(new Array(KB_N).fill(CAL_YELLOW)).catch(()=>{});
+const GID=[["gR","gRv",0],["gG","gGv",1],["gB","gBv",2]];
+function syncGain(){ GID.forEach(([id,lab,i])=>{
+  const p=Math.round(GAIN[i]*100); $(id).value=String(p); $(lab).textContent=p+"%"; }); }
+GID.forEach(([id,lab,i])=>{
+  $(id).addEventListener("input", ()=>{
+    GAIN[i]=+$(id).value/100; $(lab).textContent=$(id).value+"%";
+    localStorage.setItem("yogo_gain", JSON.stringify(GAIN));
+    if(calTest) paintCal(); });
+  $(id).addEventListener("change", ()=>{ if(!calTest) repaintNow(); });
+});
+$("gEq").value=String(EQL); $("gEqv").textContent=EQL;
+$("gEq").addEventListener("input", ()=>{ EQL=+$("gEq").value; $("gEqv").textContent=$("gEq").value;
+  localStorage.setItem("yogo_eql", $("gEq").value); if(calTest) paintCal(); });
+$("gEq").addEventListener("change", ()=>{ if(!calTest) repaintNow(); });
+$("gC").value=String(Math.round(CORR*100)); $("gCv").textContent=Math.round(CORR*100)+"%";
+$("gC").addEventListener("input", ()=>{ CORR=+$("gC").value/100; $("gCv").textContent=$("gC").value+"%";
+  localStorage.setItem("yogo_corr", $("gC").value); if(calTest) paintCal(); });
+$("gC").addEventListener("change", ()=>{ if(!calTest) repaintNow(); });
+$("gS").value=String(Math.round(SAT*100)); $("gSv").textContent=Math.round(SAT*100)+"%";
+$("gS").addEventListener("input", ()=>{ SAT=+$("gS").value/100; $("gSv").textContent=$("gS").value+"%";
+  localStorage.setItem("yogo_sat", $("gS").value); if(calTest) paintCal(); });
+$("gS").addEventListener("change", ()=>{ if(!calTest) repaintNow(); });
+/* 分块校准：4 大块对比，选一次范围收窄一半，逼近到 ±0.02 就收敛。
+   比 16 细列好认得多 —— 眼睛擅长比较大面积，不擅长从一排相似色里挑一个。 */
+const BLOCKS=["ESC–F3","F4–F7","F8–F11","F12–Del"];
+let calState=null;
+async function sweepBlocks(ch, lo, hi){
+  calState={ch,lo,hi};
+  calTest=false; stopAnim(); await enterStreamMode();
+  const base = ch===1 ? [255,255,0] : [0,255,255];
+  const gains=[0,1,2,3].map(i=>lo+(hi-lo)*(i+0.5)/4);
+  RAW=true;
+  await pushKeys(eachKey((r,c)=>{
+    const col=base.slice(); col[ch]=col[ch]*gains[Math.min(3,Math.floor(c/4))]; return col; }));
+  RAW=false;
+
+  const box=$("calPick"); box.hidden=false; box.innerHTML="";
+  const tip=document.createElement("div");
+  tip.style.cssText="width:100%;color:var(--dim2);font-size:11.5px;margin-bottom:2px";
+  tip.textContent=(ch===1?"纯黄":"纯青")+" · 四块从左到右增益 "+
+    gains.map(g=>g.toFixed(2)).join(" / ")+" —— 挑最正的那块";
+  box.appendChild(tip);
+  BLOCKS.forEach((name,i)=>{
+    const b=document.createElement("button");
+    b.className="btn"; b.style.cssText="padding:4px 9px;font-size:11.5px";
+    b.textContent=name;
+    b.addEventListener("click", async()=>{
+      const g=gains[i], step=(hi-lo)/4;
+      if(step<=0.03){                                  // 够准了，收下
+        GAIN[ch]=+g.toFixed(3);
+        localStorage.setItem("yogo_gain", JSON.stringify(GAIN));
+        syncGain(); box.hidden=true; calState=null; repaintNow();
+      } else {
+        await sweepBlocks(ch, Math.max(0.05,g-step), Math.min(1.2,g+step));
+      }
+    });
+    box.appendChild(b);
+  });
+  const done=document.createElement("button");
+  done.className="btn primary"; done.style.cssText="padding:4px 9px;font-size:11.5px";
+  done.textContent="够了，用第2块";
+  done.addEventListener("click", ()=>{
+    GAIN[ch]=+gains[1].toFixed(3);
+    localStorage.setItem("yogo_gain", JSON.stringify(GAIN));
+    syncGain(); box.hidden=true; calState=null; repaintNow(); });
+  box.appendChild(done);
+}
+/* 起始范围：你反馈黄和青都是「左边对、右边偏」，所以直接从低区间开始 */
+$("calG").addEventListener("click", ()=>sweepBlocks(1, 0.22, 0.62));
+$("calB").addEventListener("click", ()=>sweepBlocks(2, 0.22, 0.62));
+
+$("gTest").addEventListener("click", async()=>{
+  calTest=!calTest; $("gTest").textContent = calTest ? "退出校准" : "铺纯黄校准";
+  if(calTest){ stopAnim(); await enterStreamMode(); await paintCal(); } else repaintNow(); });
+$("gReset").addEventListener("click", ()=>{
+  GAIN=[1,0.50,0.42]; localStorage.setItem("yogo_gain", JSON.stringify(GAIN)); syncGain();
+  if(calTest) paintCal(); else repaintNow(); });
+$("gDot").checked=GAIN_DOT;
+$("gDot").addEventListener("change", ()=>{ GAIN_DOT=$("gDot").checked;
+  localStorage.setItem("yogo_gaindot", GAIN_DOT?"1":"0"); repaintNow(); });
+syncGain();
+
+/* 只亮点阵屏 */
+function syncKbOff(){
+  $("kbOff").textContent = KB_OFF ? "点亮键盘灯" : "熄灭键盘灯";
+  $("kbOff").classList.toggle("primary", KB_OFF);
+}
+$("kbOff").addEventListener("click", ()=>{
+  KB_OFF=!KB_OFF; localStorage.setItem("yogo_kboff", KB_OFF?"1":"0");
+  syncKbOff();
+  vibeKb=null; vibeSig=null;      // vibe 的脏检查不认识 KB_OFF，得让它忘掉「灯已经推过了」
+  enterStreamMode().then(repaintNow);   // 先把背光模式 0/254 写进固件，再重画
+});
+syncKbOff();
+
+/* 休眠时长 */
+const slSel=$("sleepSel");
+slSel.value=localStorage.getItem("yogo_sleep")||"15";
+slSel.addEventListener("change", async()=>{
+  if(!await setSleepMinutes(+slSel.value)) alert("写入失败 —— 键盘可能睡着了，敲一下任意键再试"); });
+async function ensureSleep(){
+  const want=Math.max(60,(+(slSel.value||15))*60);
+  try{ const c=await readConfig();
+    if((c[46]|c[47]<<8|c[48]<<16)!==want){
+      c[46]=want&255; c[47]=(want>>8)&255; c[48]=(want>>16)&255; await writeConfig(c); }
+  }catch(e){}
+}
+
+/* ═══════════════ 番茄钟 ═══════════════ */
+/* ════════════ 番茄钟 ════════════
+   状态机： idle → focus → alert（番茄警报）→ break → breakAlert → focus …
+   每 4 个番茄进一次长休息。
+   两块屏分工：点阵屏给精确进度（20 格环 = 每格 75 秒），键盘给粗略进度（16 列进度条）。
+   设计取向：时间到的提示必须【不可能错过】，但专注期间的灯光要【安静】。 */
+const POM_PRESETS=[
+  {n:"经典 25/5",   f:25, b:5,  l:15},
+  {n:"深度 45/10",  f:45, b:10, l:25},
+  {n:"短冲 15/3",   f:15, b:3,  l:10},
+  {n:"超长 50/10",  f:50, b:10, l:30}
+];
+let POM=(()=>{ try{ const v=JSON.parse(localStorage.getItem("yogo_pom"));
+  if(v&&v.f) return v; }catch(e){} return POM_PRESETS[0]; })();
+const TOMATO=["..gg..",".rrrr.","rrrrrr","rrrrrr",".rrrr.","..rr.."];
+const ALERT_S=30;
+
+let pomState="idle";            // idle | focus | alert | break | breakAlert
+let pomLeft=POM.f*60, pomDone=0, pomAlertT=0;
+(function(){ try{ const d=JSON.parse(localStorage.getItem("yogo_pomday"));
+  if(d && d.day===new Date().toDateString()) pomDone=d.n; }catch(e){} })();
+function saveCount(){ try{ localStorage.setItem("yogo_pomday",
+  JSON.stringify({day:new Date().toDateString(), n:pomDone})); }catch(e){} }
+
+const isBreak=()=>pomState==="break"||pomState==="breakAlert";
+function pomTotal(){
+  if(isBreak()) return (pomDone%4===0 && pomDone>0 ? POM.l : POM.b)*60;
+  return POM.f*60;
+}
+/** 点阵屏：进度环 + 中心呼吸。最后 20% 环色慢慢转红 —— 余光就能感觉到快到点 */
+function pomRing(t){
+  const total=pomTotal(), done=Math.max(0,Math.min(1,1-pomLeft/total));
+  const g=blank();
+  const base = isBreak() ? [40,225,80]
+             : mix([255,120,0],[255,20,20], Math.max(0,(done-0.8)/0.2));
+  const lit=Math.round(done*RING.length);
+  for(let i=0;i<RING.length;i++){ const [r,c]=RING[i];
+    g[r][c] = i<lit ? base.slice() : [12,9,16]; }
+  const p=0.35+0.65*Math.abs(Math.sin(t*1.6));
+  [[2,2],[2,3],[3,2],[3,3]].forEach(([r,c])=>
+    g[r][c]=[clamp(base[0]*p*0.9), clamp(base[1]*p*0.9), clamp(base[2]*p*0.9)]);
+  return g;
+}
+/** 时间到：番茄一边跳一边闪。这是整个功能里唯一要求"抢眼"的画面 */
+function pomTomato(t){
+  const b=0.45+0.55*Math.abs(Math.sin(t*5.2));
+  const jump=Math.sin(t*4.1)>0.55 ? 1 : 0;
+  const g=blank();
+  TOMATO.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    const rr=r-jump; if(rr<0) return;
+    if(ch==="g") g[rr][c]=[clamp(60*b),clamp(235*b),clamp(50*b)];
+    else if(ch==="r") g[rr][c]=[clamp(255*b),clamp(45*b),clamp(30*b)];
+  }));
+  return g;
+}
+/** 键盘：横向进度条。16 列从左往右填满，已过去的是主色、剩下的压暗 */
+function pomBar(){
+  const total=pomTotal(), done=Math.max(0,Math.min(1,1-pomLeft/total));
+  const col = isBreak() ? [40,225,80]
+            : mix([255,120,0],[255,20,20], Math.max(0,(done-0.8)/0.2));
+  const dim = isBreak() ? [0,40,18] : [40,14,0];
+  return eachKey((r,c)=>{
+    const x=(c+0.5)/16, k=Math.max(0,Math.min(1,(done-x)*9+0.5));
+    return full(mix(dim, col, smoothstep(k)));
+  });
+}
+function pomKbAlert(t){                      // 时间到：整块脉动
+  const b=0.35+0.65*Math.abs(Math.sin(t*5.2));
+  const col = pomState==="alert" ? [255,60,0] : [40,225,80];
+  return eachKey(()=>[clamp(col[0]*b),clamp(col[1]*b),clamp(col[2]*b)]);
+}
+
+function pomRender(){
+  const m=Math.floor(Math.max(0,pomLeft)/60), sec=Math.max(0,pomLeft)%60;
+  $("pclock").textContent=m+":"+String(sec).padStart(2,"0");
+  $("pphase").textContent={idle:"待机",focus:"专注",alert:"时间到",
+    break:"休息",breakAlert:"休息结束"}[pomState];
+  $("pstart").textContent = (pomState==="idle") ? "开始"
+    : (pomState==="focus"||pomState==="break") ? "暂停" : "继续";
+  $("pcount").textContent=pomDone;
+  $("ptick").textContent=Math.round(POM.f*60/20);
+  const nb=(pomDone%4===0&&pomDone>0)?POM.l:POM.b;
+  $("pmeta").textContent = pomState==="idle"
+    ? POM.n+" · 下一段专注 "+POM.f+" 分钟"
+    : isBreak() ? "休息 "+nb+" 分钟"+(nb===POM.l?"（长休息）":"")
+    : "专注 "+POM.f+" 分钟 · 已完成 "+pomDone+" 个";
+}
+function pomPaint(){
+  if(MODE!=="pomodoro"||!dev) return;
+  if(pomState==="alert"||pomState==="breakAlert"){
+    stopAnim();
+    let stopped=false,busy=false; const t0=performance.now();
+    const tick=async()=>{ if(stopped)return;
+      if(!busy){ busy=true; const tt=(performance.now()-t0)/1000;
+        try{ await pushKeys(pomKbAlert(tt)); await pushMatrix(pomTomato(tt)); }catch(e){}
+        busy=false; }
+      if(!stopped) setTimeout(tick, 1000/12); };
+    tick(); stopFn=()=>{stopped=true;};
+    return;
+  }
+  if(pomState==="idle"){ stopAnim();
+    pushKeys(THEMES[THEME].kb(0)).catch(()=>{});
+    pushMatrix(rows2rgb(STATICS.tomato)).catch(()=>{});
+    return; }
+  stopAnim();                                 // 专注/休息：2fps 足够，安静省电
+  let stopped=false,busy=false; const t0=performance.now();
+  const tick=async()=>{ if(stopped)return;
+    if(!busy){ busy=true; const tt=(performance.now()-t0)/1000;
+      try{ await pushKeys(pomBar()); await pushMatrix(pomRing(tt)); }catch(e){}
+      busy=false; }
+    if(!stopped) setTimeout(tick, 500); };
+  tick(); stopFn=()=>{stopped=true;};
+}
+function pomNotify(title, body){
+  if(!$("pnotify").checked) return;
+  popCapsule(title+(body?" — "+body:""));
+}
+function pomGoto(st){
+  pomState=st; pomAlertT=0;
+  if(st==="focus") pomLeft=POM.f*60;
+  else if(st==="break") pomLeft=pomTotal();
+  pomRender(); pomPaint();
+}
+$("pstart").addEventListener("click", ()=>{
+  setMode("pomodoro");
+  if(pomState==="idle") pomGoto("focus");
+  else if(pomState==="focus"){ pomState="paused_f"; pomRender(); stopAnim(); pomPaint(); }
+  else if(pomState==="paused_f"){ pomState="focus"; pomRender(); pomPaint(); }
+  else if(pomState==="break"){ pomState="paused_b"; pomRender(); }
+  else if(pomState==="paused_b"){ pomState="break"; pomRender(); pomPaint(); }
+  else if(pomState==="alert"){ pomGoto("break"); }
+  else if(pomState==="breakAlert"){ pomGoto("focus"); }
+});
+$("pskip").addEventListener("click", ()=>{
+  if(pomState==="alert") pomGoto("break");
+  else if(pomState==="breakAlert"||pomState==="break") pomGoto("focus");
+  else if(pomState==="focus"){ pomDone++; saveCount(); pomGoto("alert"); }
+  else pomGoto("focus");
+});
+$("preset").addEventListener("click", ()=>{
+  pomState="idle"; pomLeft=POM.f*60; stopAnim(); pomRender(); pomPaint(); });
+POM_PRESETS.forEach(pr=>{
+  const b=document.createElement("button");
+  b.className="chip"; b.style.cssText="padding:9px 8px";
+  b.setAttribute("aria-pressed", String(pr.n===POM.n));
+  const s1=document.createElement("span"); s1.textContent=pr.n;
+  s1.style.cssText="font-size:13px;color:var(--text)";
+  const s2=document.createElement("span"); s2.textContent="长休 "+pr.l+" 分";
+  b.appendChild(s1); b.appendChild(s2);
+  b.addEventListener("click", ()=>{ POM=pr; localStorage.setItem("yogo_pom", JSON.stringify(pr));
+    document.querySelectorAll("#ppresets .chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    if(pomState==="idle") pomLeft=POM.f*60;
+    pomRender(); pomPaint(); });
+  $("ppresets").appendChild(b);
+});
+setInterval(()=>{
+  if(pomState==="idle"||pomState==="paused_f"||pomState==="paused_b") return;
+  if(pomState==="alert"||pomState==="breakAlert"){
+    if(++pomAlertT>=ALERT_S && $("pauto").checked)
+      pomGoto(pomState==="alert" ? "break" : "focus");
+    return;
+  }
+  pomLeft--;
+  if(pomLeft<=0){
+    if(pomState==="focus"){ pomDone++; saveCount();
+      pomNotify("🍅 专注结束", "完成第 "+pomDone+" 个番茄，去休息");
+      pomState="alert"; pomAlertT=0; pomRender(); pomPaint(); }
+    else { pomNotify("休息结束", "回来继续");
+      pomState="breakAlert"; pomAlertT=0; pomRender(); pomPaint(); }
+    return;
+  }
+  pomRender();
+},1000);
+pomRender();
+
+/* ════════════ Vibe Coding ════════════
+   远端 Claude Code 通过 hook 把状态打回来，按 tmux 窗口分别跟踪。
+   核心设计：【哪半块键盘亮起来，就是哪个会话在叫你】——
+   两个 tmux 窗口就把 16 列劈成左右两半，一眼看出是 coder 还是 writer。
+   平时（idle）键盘保持你当前主题的颜色，不抢注意力；
+   只有真正需要你的时候才接管，而且是整区脉动，不可能错过。            */
+const ST_TXT={ idle:"空闲", busy:"执行中", wait:"等你", done:"完成", error:"出错" };
+const ST_CSS={ idle:"var(--dim2)", busy:"var(--info)", wait:"var(--accent)", done:"var(--ok)", error:"var(--bad)" };
+const ST_A  ={ busy:[0,90,255],  wait:[255,90,0],  done:[20,220,70], error:[255,20,20] };
+const ST_B  ={ busy:[0,220,255], wait:[255,225,0], done:[150,255,60], error:[255,150,0] };
+const ST_PRI={ wait:4, error:3, busy:2, done:1, idle:0 };
+let SESSIONS=[], lastSeen={}, doneTimer=null;
+
+const vibeList=()=>SESSIONS.length?SESSIONS.slice(0,3):[{key:"claude",state:"idle"}];
+
+/* ── vibe 模式：键盘完全不参与，就是当前主题的常规配色。
+   状态只由点阵屏（电子宠物）表达，coder / writer 的区分放在 HUD 胶囊里。
+   理由：键盘是你手底下的东西，让它跟着远端状态变色反而是干扰；
+   而且"哪半边亮"这种信息，胶囊上用文字说清楚比用灯猜准确得多。 */
+const PET_COL={ idle:null, busy:[0,140,255], wait:[255,110,0],
+                done:[30,225,80], error:[255,35,30] };
+let DOT_PET="blob";                      /* 点阵屏上的宠物形象 */
+
+/* 鲨鱼版：6×6 里只够画背鳍 + 身子 + 尾巴，状态全靠动作表达。
+   idle 慢慢巡游，busy 来回快游，wait 竖起背鳍原地顶，done 跃出水面，error 翻肚皮。 */
+function sharkFrame(t, st){
+  const g=blank();
+  const B = PET_COL[st] || THEMES[THEME].light;
+  const DIM=[clamp(B[0]*0.3),clamp(B[1]*0.3),clamp(B[2]*0.3)];
+  const put=(r,c,col)=>{ if(r>=0&&r<6&&c>=0&&c<6) g[r][c]=col.slice(); };
+  const draw=(dx,dy,col,fin)=>{
+    /* 身子：两行；尾巴在左，鼻子在右 */
+    [[2,1],[2,2],[2,3],[2,4],[3,1],[3,2],[3,3],[3,4]].forEach(([r,c])=>put(r+dy,c+dx,col));
+    put(2+dy,0+dx,col); put(3+dy,0+dx,col);          // 尾
+    put(1+dy,2+dx,fin||col);                          // 背鳍
+    put(2+dy,4+dx,[0,0,0]);                           // 眼
+  };
+  if(st==="error"){                                   // 翻肚皮
+    [[2,1],[2,2],[2,3],[2,4],[3,1],[3,2],[3,3],[3,4]].forEach(([r,c])=>put(5-r,c,B));
+    put(5-2,0,B); put(5-3,0,B); put(5-1,2,DIM);
+    return g;
+  }
+  if(st==="idle"){
+    const br=0.45+0.2*Math.sin(t*0.7);
+    const c=[clamp(B[0]*br),clamp(B[1]*br),clamp(B[2]*br)];
+    draw(Math.sin(t*0.35)>0?0:1, 0, c, c);
+    return g;
+  }
+  if(st==="busy"){
+    const x=Math.round(Math.sin(t*1.6));               // 来回游
+    draw(x+1, 0, B, B);
+    const wake=Math.sin(t*4)>0;
+    put(3, 0, wake?B:DIM);
+    return g;
+  }
+  if(st==="wait"){
+    const up=Math.sin(t*4)>0.2?1:0;
+    draw(1, 0, B, [255,255,255]);
+    put(0, 2, up?[255,255,255]:DIM);                  // 背鳍冒出水面
+    return g;
+  }
+  /* done：跃出水面，头顶冒星 */
+  const jump=Math.abs(Math.sin(t*2.2));
+  draw(1, -Math.round(jump), B, B);
+  if(jump>0.6){ put(0,4,[255,255,180]); put(0,0,[255,255,180]); }
+  return g;
+}
+
+function petFrame(t, st){
+  if(DOT_PET==="shark") return sharkFrame(t, st);
+  return blobFrame(t, st);
+}
+function blobFrame(t, st){
+  const g=blank();
+  const body = PET_COL[st] || THEMES[THEME].light;
+  const put=(r,c,col)=>{ if(r>=0&&r<6&&c>=0&&c<6) g[r][c]=col.slice(); };
+  const B=body, DIM=[clamp(body[0]*0.35),clamp(body[1]*0.35),clamp(body[2]*0.35)];
+
+  if(st==="idle"){                                  // 睡觉：几乎不动，偶尔飘个 Z
+    const br=0.75+0.25*Math.sin(t*0.8);
+    const c=[clamp(B[0]*br*0.5),clamp(B[1]*br*0.5),clamp(B[2]*br*0.5)];
+    ["o....o",".oooo.","oooooo","oooooo",".oooo.",".o..o."].forEach((row,r)=>
+      [...row].forEach((ch,x)=>{ if(ch==="o") put(r,x,c); }));
+    put(2,1,DIM); put(2,4,DIM);
+    const zp=(t*0.45)%4;
+    if(zp<3) put(Math.floor(2-zp), 5, [clamp(180*(1-zp/3)),clamp(180*(1-zp/3)),clamp(220*(1-zp/3))]);
+    return g;
+  }
+  if(st==="busy"){
+    ["o....o",".oooo.","oooooo","oooooo",".oooo.","......"].forEach((row,r)=>
+      [...row].forEach((ch,x)=>{ if(ch==="o") put(r,x,B); }));
+    const look=Math.sin(t*1.4)>0 ? 0 : 1;
+    put(2,1+look,[0,0,0]); put(2,4-look,[0,0,0]);
+    const step=Math.sin(t*3.2)>0;
+    put(5,1,step?B:DIM); put(5,4,step?DIM:B);
+    return g;
+  }
+  if(st==="wait"){
+    const jump=Math.sin(t*4)>0.2?1:0;
+    const k=0.55+0.45*Math.abs(Math.sin(t*4));
+    const C=[clamp(B[0]*k),clamp(B[1]*k),clamp(B[2]*k)];
+    ["o....o",".oooo.","oooooo","oooooo",".oooo.",".o..o."].forEach((row,r)=>
+      [...row].forEach((ch,x)=>{ if(ch==="o") put(r-jump,x,C); }));
+    put(2-jump,1,[0,0,0]); put(2-jump,2,[0,0,0]);
+    put(2-jump,3,[0,0,0]); put(2-jump,4,[0,0,0]);
+    put(3-jump,2,[0,0,0]); put(3-jump,3,[0,0,0]);
+    return g;
+  }
+  if(st==="done"){
+    const ph=(t*2.2)%1, jump=ph<0.5?1:0;
+    ["o....o",".oooo.","oooooo","oooooo",".oooo.",".o..o."].forEach((row,r)=>
+      [...row].forEach((ch,x)=>{ if(ch==="o") put(r-jump,x,B); }));
+    put(2-jump,1,[0,0,0]); put(2-jump,4,[0,0,0]);
+    put(4-jump,2,[0,0,0]); put(4-jump,3,[0,0,0]);
+    if(jump){ const sp=[255,230,120]; put(0,0,sp); put(0,5,sp); put(1,2,sp); }
+    return g;
+  }
+  const sag=Math.sin(t*1.6)>0?0:1;
+  ["......","o....o",".oooo.","oooooo","oooooo",".oooo."].forEach((row,r)=>
+    [...row].forEach((ch,x)=>{ if(ch==="o") put(Math.min(5,r+sag),x,B); }));
+  put(Math.min(5,2+sag),1,[0,0,0]); put(Math.min(5,2+sag),4,[0,0,0]);
+  put(Math.min(5,4+sag),2,[0,0,0]); put(Math.min(5,4+sag),3,[0,0,0]);
+  return g;
+}
+/* vibe 模式：点阵屏上一只常驻的电子宠物，颜色和动作跟着最新会话的状态走。
+   就这一件事，不掺主题图。
+
+   以前这里还有个「主题 vibe」：平时放主题图、有事时宠物弹出来演 6 秒。
+   那个设计是错的 —— 它把「点阵屏归谁管」和「有事要不要提醒」两件正交的事
+   捏成了一个三态开关，结果是主题模式里冒出宠物、vibe 里冒出主题图，来回闪。
+   现在拆干净：模式只决定点阵屏归谁；提醒是独立开关，走胶囊，不碰点阵屏。 */
+function vibePaint(){
+  if(MODE!=="vibe"||!dev){ vibeSig=null; return; }
+  const st = (SESSIONS[0]||{}).state||"idle";
+  /* applySnapshot 每条快照都会叫我一次，但画面多半没变。真变了才重启循环 ——
+     否则每条会话消息刷一次全键盘灯，灯乱闪还把电耗光（已经吃过一次亏）。 */
+  const sig = [st, THEME, DOT_PET].join("|");
+  if(sig===vibeSig) return;
+  stopAnim();                         // 注意：这里会把 vibeSig 清掉
+  vibeSig = sig;
+  /* 键盘灯只跟主题走，跟会话状态无关。主题没换就别重推。 */
+  if(vibeKb!==THEME){ vibeKb=THEME; pushKeys(THEMES[THEME].kb(0)).catch(()=>{}); }
+  if(st==="idle"){
+    /* 没事的时候宠物睡觉：一帧定格，不开循环。以前 2fps 呼吸 + 飘 Z，
+       看着可爱，但意味着大多数时间流量永远不断。省电优先。 */
+    pushMatrix(petFrame(0, st)).catch(()=>{});
+    return;
+  }
+  const fps = st==="busy" ? 5 : 12;
+  let stopped=false, busy=false; const t0=performance.now();
+  const tick=async()=>{ if(stopped)return;
+    if(!busy){ busy=true;
+      try{ await pushMatrix(petFrame((performance.now()-t0)/1000, st)); }catch(e){}
+      busy=false; }
+    if(!stopped) setTimeout(tick, 1000/fps); };
+  tick(); stopFn=()=>{stopped=true;};
+}
+function esc(x){ return String(x==null?"":x).replace(/[<>&"]/g, m=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[m])); }
+function renderSessionList(){
+  const box=$("vSessions"); box.innerHTML="";
+  $("vDot") && ($("vDot").style.color = ST_CSS[(SESSIONS[0]||{}).state||"idle"]);
+  if(!SESSIONS.length){
+    box.innerHTML='<div class="agent"><div class="st">还没收到远端上报</div>'+
+      '<div class="meta">在服务器上装好 hook，并确认 SSH 反向隧道已开（见 remote/ 目录）</div></div>';
+    return;
+  }
+  const n=Math.min(SESSIONS.length,3), w=16/n;
+  SESSIONS.forEach((sn,i)=>{
+    const d=document.createElement("div"); d.className="agent"; d.style.marginBottom="9px";
+    const zone = i<n ? (n===1?"占满整块键盘":"键盘第 "+Math.round(i*w+1)+"–"+Math.round((i+1)*w)+" 列") : "未上屏";
+    d.innerHTML='<div class="st"><span class="dot" style="color:'+ST_CSS[sn.state]+';background:currentColor"></span>'+
+      '<span>'+esc(sn.key)+'</span><span class="pill" style="color:'+ST_CSS[sn.state]+'">'+
+      (ST_TXT[sn.state]||sn.state)+'</span>'+
+      '<span style="font-size:11.5px;color:var(--dim2);font-weight:400">'+zone+'</span></div>'+
+      '<div class="meta">'+[sn.tool&&("工具 "+esc(sn.tool)), sn.idx&&("tmux #"+esc(sn.idx)),
+        sn.cwd&&esc(sn.cwd), sn.msg&&esc(String(sn.msg).slice(0,70))].filter(Boolean).join("   ·   ")+'</div>';
+    box.appendChild(d);
+  });
+}
+/* 提醒一律走胶囊 —— 不用 Web Notification，那个会进 Windows 通知中心。
+   服务端会把会话状态推给 hud.py，胶囊自己滑下来，按中键收起。
+   这里只负责番茄钟这类页面自己产生的提醒。 */
+function popCapsule(why){
+  fetch("/hud/pop",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({why:String(why||"").slice(0,120)})}).catch(()=>{});
+}
+function notify(sn){ /* 会话状态由服务端直接推给胶囊，这里不重复弹 */ }
+$("vPerm").textContent="提醒从顶部胶囊弹出";
+
+/* 提醒的冷却。没有冷却的话，会话状态一跳就弹一次，几秒一下，非常烦 ——
+   「主题 vibe 一直闪」就是这么来的。同一条会话同一状态不重复弹，
+   两次提醒之间至少隔 ALERT_GAP。 */
+const ALERT_GAP = 45000;
+let alertAt = 0, alertLast = "";
+function maybeAlert(sn){
+  if(!ALERT_ON||!CLAUDE_ON) return;
+  const now = Date.now(), key = sn.key + ":" + sn.state;
+  if(now - alertAt < ALERT_GAP) return;
+  if(key === alertLast && now - alertAt < ALERT_GAP * 4) return;
+  alertAt = now; alertLast = key;
+  popCapsule(sn.key + " " + (ST_TXT[sn.state] || sn.state));
+}
+
+function applySnapshot(snap){
+  SESSIONS=(snap.sessions||[]).slice().sort(
+    (a,b)=>(ST_PRI[b.state]||0)-(ST_PRI[a.state]||0) || String(a.key).localeCompare(String(b.key)));
+  renderSessionList();
+  /* 只有【状态跳变到 完成/等你/出错】才算事件。busy 和 idle 一律安静 */
+  SESSIONS.forEach(sn=>{
+    if(lastSeen[sn.key]===sn.state) return;
+    lastSeen[sn.key]=sn.state;
+    if(sn.state==="done"||sn.state==="wait"||sn.state==="error"){
+      notify(sn);
+      maybeAlert(sn);
+    }
+  });
+  vibePaint();
+}
+function syncAlert(){
+  $("vAlert").textContent = "有事弹胶囊：" + (ALERT_ON ? "开" : "关");
+  $("vAlert").classList.toggle("primary", ALERT_ON);
+  try{ renderDotOwner(); }catch(e){}
+}
+$("vAlert").addEventListener("click", ()=>{
+  ALERT_ON=!ALERT_ON; localStorage.setItem("yogo_alert", ALERT_ON?"1":"0"); syncAlert();
+});
+syncAlert();
+$("vTest").addEventListener("click", async()=>{
+  setMode("vibe");
+  const steps=[
+    [{key:"coder",state:"busy",tool:"Bash"},{key:"writer",state:"busy",tool:"Read"}],
+    [{key:"coder",state:"wait",tool:"Edit"},{key:"writer",state:"busy",tool:"Read"}],
+    [{key:"coder",state:"busy",tool:"Edit"},{key:"writer",state:"done",msg:"草稿写完了"}],
+    [{key:"coder",state:"error",msg:"测试失败"},{key:"writer",state:"idle"}],
+    [{key:"coder",state:"done",msg:"修好了"},{key:"writer",state:"idle"}]
+  ];
+  for(const st of steps){ applySnapshot({sessions:st}); await new Promise(r=>setTimeout(r,4000)); }
+});
+/* SSE：接远端 Claude 上报 */
+(function connectSSE(){
+  let es;
+  try{ es=new EventSource("/events"); }catch(e){ return; }
+  es.onmessage=ev=>{
+    let d; try{ d=JSON.parse(ev.data); }catch(_){ return; }
+    if(d.action){ handleAction(d.action); return; }
+    if(d.sessions) applySnapshot(d);
+  };
+  es.onerror=()=>{ es.close(); setTimeout(connectSSE, 3000); };
+})();
+renderSessionList();
+function handleAction(a){                    // 键盘扩展键触发
+  if(a==="pomodoro"){ $("pstart").click(); }
+  else if(a==="ack"){                                   // 「我看到了」：把等待态清成执行中
+    SESSIONS=SESSIONS.map(s=>s.state==="wait"?Object.assign({},s,{state:"busy"}):s);
+    renderSessionList(); vibePaint();
+  }
+  else if(a==="focus"){ setMode(MODE==="focus"?LAST_RESIDENT:"focus"); }
+}
+
+/* ── 顶部胶囊的设置：皮肤 / 动画 / 宠物。存在服务端，胶囊那边轮询取。 ── */
+const CAP_SKINS=[["obsidian","曜石"],["nord","极夜"],["abyss","深海"],["matcha","苔"],
+                 ["sakura","樱"],["lava","熔岩"],["pika","皮卡丘"],["eva01","初号机"],
+                 ["cyber","赛博"],["frost","霜（浅色）"]];
+const CAP_ANIMS=[["island","灵动岛 · 从一颗药丸长开"],["drop","下坠 · 整条从上方落下"],
+                 ["unfold","展开 · 贴着上沿铺开"],["fade","淡入 · 轻轻浮现"]];
+const CAP_PETS=[["octopus","小章鱼"],["shark","鲨鱼"],["cat","猫"],["penguin","企鹅"]];
+const CAP_HOLDS=[["1.5","1.5 秒"],["2","2 秒"],["3","3 秒"]];   /* 扫一眼的东西，慢档没意义 */
+function fillSel(id, list, keepFirst){
+  const el=$(id); if(!el) return;
+  if(!keepFirst) el.innerHTML="";
+  for(const [v,t] of list){ const o=document.createElement("option"); o.value=v; o.textContent=t; el.appendChild(o); }
+}
+fillSel("capSkin", CAP_SKINS, true); fillSel("capAnim", CAP_ANIMS); fillSel("capPet", CAP_PETS);
+fillSel("capHold", CAP_HOLDS);
+async function loadCap(){
+  try{
+    const d=await (await fetch("/capsule",{cache:"no-store"})).json();
+    if($("capSkin")) $("capSkin").value=d.skin||"";
+    if($("capAnim")) $("capAnim").value=d.anim||"island";
+    if($("capPet"))  $("capPet").value=d.pet||"octopus";
+    if($("capHold")) $("capHold").value=String(d.hold||"2");
+  }catch(e){}
+}
+function saveCap(){
+  fetch("/capsule",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({skin:$("capSkin").value, anim:$("capAnim").value,
+                         pet:$("capPet").value, hold:$("capHold").value})}).catch(()=>{});
+}
+["capSkin","capAnim","capPet","capHold"].forEach(id=>{
+  const el=$(id); if(el) el.addEventListener("change", saveCap);
+});
+loadCap();
+loadClaudeMode();
+if($("claudeOn")) $("claudeOn").addEventListener("click", async()=>{
+  CLAUDE_ON=!CLAUDE_ON; syncClaudeUI();
+  try{ await fetch("/settings",{method:"POST",headers:{"Content-Type":"application/json"},
+                                 body:JSON.stringify({claude:CLAUDE_ON})}); }catch(e){}
+});
+
+/* 点阵屏上的电子宠物换形象 */
+if($("dotPet")){
+  DOT_PET = localStorage.getItem("yogo_dotpet") || "blob";
+  $("dotPet").value = DOT_PET;
+  $("dotPet").addEventListener("change", ()=>{
+    DOT_PET=$("dotPet").value; localStorage.setItem("yogo_dotpet", DOT_PET);
+    if(MODE==="vibe") vibePaint();
+  });
+}
+
+/* 粘 token：存到本机 .token，服务端立刻起额度轮询 */
+if($("tokSave")) $("tokSave").addEventListener("click", async()=>{
+  const t=$("tokBox").value.trim();
+  if(t.length<20){ $("tokNote").textContent="这串太短了，不像 token"; return; }
+  $("tokNote").textContent="验证中…";
+  try{
+    const r=await (await fetch("/token",{method:"POST",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify({token:t})})).json();
+    $("tokBox").value="";
+    if(!r.ok){ $("tokNote").textContent = "没存成：" + (r.why||""); return; }
+    if(r.valid){
+      $("tokNote").textContent = "通了 ✓ 拿到这几格额度：" +
+        (r.windows||[]).join("、") + "。轮询已启动，约 3 分钟刷一次。";
+    }else{
+      $("tokNote").textContent = "存下了，但验不过：" + (r.why||"") +
+        "。setup-token 输出的是 sk-ant-oat01- 开头的一长串，整行复制。";
+    }
+  }catch(e){ $("tokNote").textContent="没存成："+e.message; }
+});
+
+/* 键盘睡醒守望：键盘休眠时它不应答，推流会静默中断；
+   一旦它醒过来（你按了任意键），这儿会自动把当前模式重新套上去，
+   不用你再去点一遍。5 秒问一次，问的是最便宜的握手 + 一次短读。 */
+setInterval(async ()=>{
+  if(!dev || awake) return;
+  try{
+    await readConfig();                  // 应答了 = 醒了；没应答会抛
+    streamOn=null;                       // 强制重新写一次配置
+    markAwake();
+    lastErr="";
+    await applyMode(MODE, true);
+  }catch(e){}
+}, 5000);
+
+/* 把番茄钟 / 键盘状态推给 HUD 胶囊 */
+setInterval(()=>{
+  try{
+    fetch("/ui",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        pom:{ clock:$("pclock")?$("pclock").textContent:null,
+              phase:$("pphase")?$("pphase").textContent:null,
+              done: typeof pomDone!=="undefined"?pomDone:null },
+        kb:{ connected: !!dev, theme: THEMES[THEME]?THEMES[THEME].name:null, mode: MODE,
+             fps: $("metric")?$("metric").textContent:null, pushOK: pushOK,
+             awake: awake, err: lastErr, devInfo: devInfo, devPick: devPick }
+      })}).catch(()=>{});
+  }catch(e){}
+}, 1500);
+
+/* 启动 */
+document.querySelectorAll(".mode").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.id===MODE)));
+document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.dataset.pane===MODE));
+drawPreview(rows2rgb(THEMES[THEME].dot));
+drawKeyboard(THEMES[THEME].kb(0));
+</script>
+</body>
+</html>

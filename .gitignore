@@ -1,0 +1,14 @@
+# 本机产物 —— 都是运行时生成的，不进仓库
+.hudprofile/
+__pycache__/
+*.pyc
+*.log
+*.err
+.token*
+config.bak
+capsule.json
+settings.json
+yogo.ico
+art/*
+!art/把图片放这里.txt
+preview_*.png

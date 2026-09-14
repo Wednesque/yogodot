@@ -1,0 +1,46 @@
+{
+  "_说明": [
+    "把 hooks 这一段合并进服务器上的 ~/.claude/settings.json。",
+    "async:true = 上报完全不阻塞 Claude；timeout 兜底；脚本永远 exit 0。",
+    "刻意只用不参与决策的事件：Notification 是 display-only，不会影响权限流程。",
+    "如果你想让权限请求更早亮灯，再加 PermissionRequest —— 但注意它是 Custom 决策模型，",
+    "脚本必须返回空 JSON（本脚本不输出任何内容，安全）。"
+  ],
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "PreToolUse": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "Notification": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "PostToolUseFailure": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "Stop": [
+      { "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ],
+    "SessionEnd": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "$HOME/.claude/hooks/claude-yogo-hook.sh", "async": true, "timeout": 5 }
+      ]}
+    ]
+  }
+}
