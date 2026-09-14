@@ -1,6 +1,8 @@
-# YogoDot
+# YogoDot —— ATK YOGO 75 PRO 点阵屏 / 背光第三方控制工具
 
-ATK YOGO 75 PRO 的点阵屏和背光,不用开 ATK HUB 也能玩。
+**ATK YOGO 75 PRO**(YOGO 75 / YOGO75 PRO)键盘的点阵屏和 RGB 背光控制,**ATK HUB 驱动的替代品**。不用开官方驱动,不用联网,不写 flash。
+
+> **English:** YogoDot is a third-party controller for the **ATK YOGO 75 PRO** keyboard's 6×6 dot-matrix screen and per-key RGB backlight — an alternative to the official ATK HUB driver. Pure Python + Windows HID, no flash writes. Pixel art library, themes, animations, pomodoro, power saving (blank on lock / idle, low-battery fallback). Optional "Claude mode" shows Claude Code usage quota and session state on a desktop capsule and as a pet on the dot screen. Windows only; 2.4G dongle or wired (Bluetooth can't be controlled — firmware limitation).
 
 它宣传的「1.54 寸像素屏」实际是 **6×6 = 36 颗全彩 LED**。官方驱动只能往里写一张静态图,多帧动画根本传不到设备。这个工具直接跟键盘的 HID 通道说话,把点阵屏和 84 颗按键背光都变成可以随便刷的画布 —— 逐像素全彩、动画、零 flash 磨损。
 
