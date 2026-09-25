@@ -39,7 +39,7 @@
   html{color-scheme:dark;scroll-behavior:smooth}
   body{margin:0;background:var(--bg);color:var(--text);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
   a{color:inherit}
-  img{max-width:100%;display:block}
+  img{max-width:100%;height:auto;display:block}   /* height:auto 必须有：<img> 带了 height 属性，只压宽度会把图拉长 */
   .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
   .nw{white-space:nowrap}
   :focus-visible{outline:2px solid var(--accent2);outline-offset:3px;border-radius:6px}
