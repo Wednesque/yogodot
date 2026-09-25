@@ -9,7 +9,7 @@
 <link rel="canonical" href="https://wednesque.github.io/yogodot/">
 <meta property="og:title" content="YogoDot — 让 YOGO 75 PRO 的像素屏想放什么放什么">
 <meta property="og:description" content="48 张像素图、24 套主题、番茄钟、锁屏自动熄灭。Windows 免安装，免费开源。">
-<meta property="og:image" content="https://wednesque.github.io/yogodot/img/console.png">
+<meta property="og:image" content="https://wednesque.github.io/yogodot/img/og.jpg">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141019'/%3E%3Cg fill='%23FF6A1F'%3E%3Crect x='6' y='6' width='5' height='5' rx='1'/%3E%3Crect x='13.5' y='6' width='5' height='5' rx='1'/%3E%3Crect x='21' y='6' width='5' height='5' rx='1'/%3E%3Crect x='6' y='13.5' width='5' height='5' rx='1'/%3E%3Crect x='21' y='13.5' width='5' height='5' rx='1'/%3E%3Crect x='6' y='21' width='5' height='5' rx='1'/%3E%3Crect x='13.5' y='21' width='5' height='5' rx='1'/%3E%3Crect x='21' y='21' width='5' height='5' rx='1'/%3E%3C/g%3E%3C/svg%3E">
 <script type="application/ld+json">
@@ -78,6 +78,10 @@
   .phone-note{display:none;margin-top:16px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--bg2);font-size:14.5px;color:var(--text)}
   .phone-note b{color:var(--fg)}
 
+  .photo{margin:0;justify-self:stretch}
+  .photo img{width:100%;height:auto;border-radius:22px;border:1px solid var(--line);box-shadow:0 40px 90px rgba(0,0,0,.55)}
+  .photo figcaption{font-size:13.5px;color:var(--dim2);margin-top:12px;text-align:center}
+  .photo figcaption b{color:var(--dim);font-weight:600}
   .bezel{justify-self:center;background:#08070b;border:1px solid var(--line);border-radius:28px;padding:32px;
          box-shadow:0 40px 90px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
   .cap{font:500 12.5px/1.4 var(--mono);color:var(--dim2);text-align:center;margin-top:16px}
@@ -99,7 +103,15 @@
   .sub{color:var(--dim);font-size:16.5px;margin:0}
   .band{background:var(--bg2);border-block:1px solid var(--line)}
 
-  /* ── 图案墙 ── */
+  /* ── 图案墙：左边一块能点的演示屏 + 实拍对照，右边图案 ── */
+  .pat{display:grid;grid-template-columns:300px minmax(0,1fr);gap:40px;align-items:start}
+  .pat-side{position:sticky;top:24px;display:grid;gap:16px;justify-items:center;width:300px}
+  .pat-side .bezel{padding:22px;border-radius:22px}
+  .pat-side .dm.big{--c:34px;--g:9px}
+  .real{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+  .real img{width:100%;height:auto;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+  .real-cap{font-size:13px;color:var(--dim2);text-align:center;max-width:250px;line-height:1.55}
+  .real-cap b{color:var(--dim)}
   .cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
   .cats button{font:inherit;font-size:14px;color:var(--dim);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
   .cats button[aria-pressed="true"]{color:var(--fg);border-color:var(--accent);background:rgba(255,106,31,.1)}
@@ -173,9 +185,10 @@
   @media (max-width:860px){
     nav a:not(.dl){display:none}
     .hero{grid-template-columns:1fr;gap:28px;padding:18px 0 48px}
-    .hero .screen{order:-1}
-    .bezel{padding:20px;border-radius:22px}
-    .dm.big{--c:34px;--g:8px}
+    .hero .photo{order:-1}
+    .pat{grid-template-columns:minmax(0,1fr);gap:26px}
+    .pat-side{position:static;width:auto;max-width:340px;margin-inline:auto}
+    .pat-side .dm.big{--c:30px;--g:7px}
     h1{font-size:26px}
     .lead{font-size:16.5px}
     .phone-note{display:block}
@@ -229,12 +242,10 @@
       </div>
       <div class="phone-note">这是 <b>Windows 电脑软件</b>，手机上下载了打不开。先收藏这个页面，回到电脑上再下。</div>
     </div>
-    <div class="screen">
-      <div class="bezel">
-        <div class="dm big glow" id="hero" role="img" aria-label="6×6 像素屏演示"></div>
-        <div class="cap" id="heroCap"><b>网页演示</b> · 键盘上显示的就是这些图</div>
-      </div>
-    </div>
+    <figure class="photo">
+      <img src="img/photo-hero.jpg" alt="实拍：ATK YOGO 75 PRO 右上角的像素屏正显示皮卡丘" width="1400" height="1026" fetchpriority="high">
+      <figcaption><b>实拍</b> · 右上角的像素屏正显示皮卡丘</figcaption>
+    </figure>
   </section>
 </div>
 
@@ -242,11 +253,27 @@
   <div class="wrap">
     <div class="sec-head">
       <h2><span class="n">48</span> 张像素图，点一下就上屏</h2>
-      <p class="sub">角色、蔬菜、水果、动物、EVA、我的世界。在软件里点哪张，键盘小屏就显示哪张；关掉软件再开还记得。在这里点一下，上面那块屏会跟着换。</p>
+      <p class="sub">角色、蔬菜、水果、动物、EVA、我的世界。在软件里点哪张，键盘小屏就显示哪张；关掉软件再开还记得。在这里点一下，左边那块屏会跟着换。</p>
     </div>
-    <div class="cats" id="cats" role="group" aria-label="按分类筛选"></div>
-    <div class="wall fold" id="wall"></div>
-    <button class="more" id="more" type="button">看全部 48 张</button>
+    <div class="pat">
+      <div class="pat-side">
+        <div class="bezel">
+          <div class="dm big glow" id="demo" role="img" aria-label="6×6 像素屏演示"></div>
+          <div class="cap" id="demoCap"><b>网页演示</b></div>
+        </div>
+        <div class="real">
+          <img src="img/real-1.jpg" alt="实拍：像素屏显示橙色图案" width="298" height="298" loading="lazy">
+          <img src="img/real-2.jpg" alt="实拍：像素屏显示皮卡丘" width="304" height="304" loading="lazy">
+          <img src="img/real-3.jpg" alt="实拍：像素屏显示粉色图案" width="304" height="304" loading="lazy">
+        </div>
+        <div class="real-cap"><b>实拍对照</b> · 屏幕上有一层磨砂灯罩，实物的像素边缘是柔和的，颜色更暖</div>
+      </div>
+      <div>
+        <div class="cats" id="cats" role="group" aria-label="按分类筛选"></div>
+        <div class="wall fold" id="wall"></div>
+        <button class="more" id="more" type="button">看全部 48 张</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -380,8 +407,8 @@
   }
   const byName = n => (ART.find(a=>a[1]===n)||[])[2];
 
-  /* ── 首屏：轮播图案库里的真图 ── */
-  const hero = matrix(document.getElementById('hero')), heroCap = document.getElementById('heroCap');
+  /* ── 演示屏：轮播图案库里的真图，点图案墙就换 ── */
+  const hero = matrix(document.getElementById('demo')), heroCap = document.getElementById('demoCap');
   const reel = ['皮卡丘','爱心','苦力怕','樱桃','幽灵','初号机','西瓜','太空侵略者','狐狸','钻石'].filter(byName);
   let ri = 0, hold = 0;
   function showHero(name){ hero(byName(name)); heroCap.innerHTML = '<b>网页演示</b> · ' + name; }

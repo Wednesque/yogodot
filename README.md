@@ -4,7 +4,14 @@
 
 **Windows 免安装 · 免费开源** · [官网](https://wednesque.github.io/yogodot/) · *[English below](#english)*
 
-![YogoDot 软件界面：左边是像素屏和 84 键背光的实时预览，右边是 24 套主题](docs/img/console.png)
+![实拍：ATK YOGO 75 PRO 右上角的像素屏正显示皮卡丘](docs/img/photo-hero.jpg)
+
+<p align="center">
+  <img src="docs/img/real-1.jpg" width="140" alt="实拍：像素屏显示橙色图案">
+  <img src="docs/img/real-2.jpg" width="140" alt="实拍：像素屏显示皮卡丘">
+  <img src="docs/img/real-3.jpg" width="140" alt="实拍：像素屏显示粉色图案">
+  <br><sub>实拍。屏幕上有一层磨砂灯罩，像素边缘是柔和的</sub>
+</p>
 
 ## 下载
 
@@ -23,6 +30,8 @@
 **第一次打开 Windows 多半会拦一下**(「Windows 已保护你的电脑」):软件没买代码签名证书,不是病毒。点「更多信息」→「仍要运行」,以后就不会再问了。
 
 ## 能做什么
+
+![YogoDot 软件界面：左边是像素屏和 84 键背光的实时预览，右边是 24 套主题](docs/img/console.png)
 
 - **48 张像素图**:角色、蔬菜、水果、动物、EVA、我的世界,点一下就上屏,关掉软件再开还记得
 - **24 套主题**:一张小屏图案 + 一套 84 键配色,成套切换。颜色按这把键盘的灯珠调过,不会发白
