@@ -48,6 +48,12 @@ IMAGE_ICON, LR_LOADFROMFILE, LR_DEFAULTSIZE = 1, 0x0010, 0x0040
 TPM_RIGHTALIGN, TPM_BOTTOMALIGN, TPM_RETURNCMD = 0x0008, 0x0020, 0x0100
 MF_STRING, MF_SEPARATOR, MF_CHECKED = 0x0000, 0x0800, 0x0008
 SW_HIDE, SW_SHOW, SW_RESTORE, SW_SHOWNOACTIVATE = 0, 5, 9, 4
+SWP_NOSIZE, SWP_NOZORDER, SWP_NOACTIVATE = 0x0001, 0x0004, 0x0010
+# 控制台窗口先生在屏幕外：Chrome 的 --app 窗口从创建到我们能藏起来之间，
+# 会先白屏一段（开机时尤其久），而且它没有关闭按钮，用户只能干看着。
+# 生在屏外就一次都不会露脸，真要看时再搬回来。
+OFFSCREEN = (-32000, -32000)
+CONSOLE_SIZE = (1320, 900)
 
 ID_CONSOLE, ID_CAPSULE, ID_AUTOSTART, ID_RESTART, ID_QUIT = 1001, 1002, 1003, 1004, 1005
 
@@ -120,15 +126,17 @@ class Console:
         # 已经存下的旧缓存条目（no-store 只对将来的请求生效）。
         ver = self.page_ver()
         self.ver = ver
+        w, hgt = CONSOLE_SIZE
         h, pid = hud.chrome_app("%s/yogo.html?v=%d" % (SERVER, ver), self.TITLE,
-                                1320, 900, 140, 60, wait=25.0)
+                                w, hgt, OFFSCREEN[0], OFFSCREEN[1], wait=25.0)
         if not h:
             print("!! 控制台窗口没起来")
             return
         self.hwnd = h
-        self.visible = True
-        if not show:
-            self.hide()
+        self.visible = False
+        user32.ShowWindow(h, SW_HIDE)
+        if show:
+            self.show()
         print("   控制台就位  hwnd=0x%X  pid=%d" % (h, pid))
 
     @staticmethod
@@ -145,9 +153,21 @@ class Console:
         if not self.alive():
             threading.Thread(target=self.launch, args=(True,), daemon=True).start()
             return
+        self.center()
         user32.ShowWindow(self.hwnd, SW_RESTORE)
         user32.SetForegroundWindow(self.hwnd)
         self.visible = True
+
+    def center(self):
+        """从屏幕外搬回来，摆在屏幕中间偏上。"""
+        w, h = CONSOLE_SIZE
+        try:
+            sw, sh = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+            x, y = max(0, (sw - w) // 2), max(0, (sh - h) // 3)
+        except Exception:
+            x, y = 140, 60
+        user32.SetWindowPos(self.hwnd, None, x, y, 0, 0,
+                            SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
 
     def hide(self):
         if self.alive():
@@ -268,6 +288,9 @@ user32.PostMessageW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
 user32.SetForegroundWindow.argtypes = [wt.HWND]
 user32.ShowWindow.argtypes = [wt.HWND, ctypes.c_int]
 user32.IsWindow.argtypes = [wt.HWND]
+user32.SetWindowPos.argtypes = [wt.HWND, wt.HWND, ctypes.c_int, ctypes.c_int,
+                                ctypes.c_int, ctypes.c_int, wt.UINT]
+user32.GetSystemMetrics.argtypes = [ctypes.c_int]
 user32.GetMessageW.argtypes = [ctypes.c_void_p, wt.HWND, wt.UINT, wt.UINT]
 kernel32.GetModuleHandleW.restype = wt.HINSTANCE
 kernel32.CreateMutexW.restype = wt.HANDLE

@@ -105,7 +105,12 @@ user32.SetWindowsHookExW.argtypes = [ctypes.c_int, ctypes.c_void_p, wt.HINSTANCE
 user32.SetWindowsHookExW.restype = HHOOK
 user32.UnhookWindowsHookEx.argtypes = [HHOOK]
 gdi32.CreateCompatibleDC.restype = wt.HDC
+gdi32.CreateCompatibleDC.argtypes = [wt.HDC]
 gdi32.CreateDIBSection.restype = wt.HANDLE
+gdi32.CreateDIBSection.argtypes = [wt.HDC, ctypes.c_void_p, wt.UINT,
+                                   ctypes.c_void_p, wt.HANDLE, wt.DWORD]
+gdi32.DeleteObject.argtypes = [wt.HANDLE]
+user32.GetDC.argtypes = [wt.HWND]
 gdi32.SelectObject.argtypes = [wt.HDC, wt.HANDLE]
 gdi32.SelectObject.restype = wt.HANDLE
 gdi32.DeleteObject.argtypes = [wt.HANDLE]
@@ -413,7 +418,11 @@ class Hud:
                 data = self.rend.frame(self.body, self.style, t)
             self._blit(data)
         except Exception as e:
-            print("!! 画胶囊出错：%s" % e, flush=True)
+            # 带上出错的那一行 —— 光看 "argument 1: OverflowError" 根本不知道是哪个调用
+            import traceback
+            tb = traceback.extract_tb(e.__traceback__)
+            where = "%s:%d" % (tb[-1].name, tb[-1].lineno) if tb else "?"
+            print("!! 画胶囊出错（%s）：%s" % (where, e), flush=True)
 
     def _blit(self, data):
         hdc = user32.GetDC(None)
