@@ -22,6 +22,7 @@ import threading
 import time
 
 import hidprobe as H
+import paths
 
 C_HAND, C_READ, C_WRITE, C_SYNCLED, C_ENDSYNC, C_MATRIX = 16, 20, 21, 46, 47, 59
 C_POWER = 48                 # 电量，从官方 HUB 的命令表里对出来的
@@ -368,7 +369,7 @@ class Keyboard:
     # ── 配置备份 ───────────────────────────────────────────────────
     # write_config 是读-改-写，写坏了没处找原始值。第一次成功读到配置时
     # 落一份到 config.bak，之后任何时候都能 restore_config() 推回去。
-    BAK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.bak")
+    BAK = paths.data("config.bak")
 
     def _backup(self, cfg):
         try:

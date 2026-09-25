@@ -15,6 +15,8 @@ YOGO 控制台 —— 本地服务
 """
 import json
 import os
+
+import paths
 import queue
 import re
 import subprocess
@@ -25,7 +27,8 @@ from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
 PORT = int(os.environ.get("YOGO_PORT", "8787"))
 HOOK_PORT = int(os.environ.get("YOGO_HOOK_PORT", "9099"))
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = paths.RES                    # 页面等只读资源
+DATA = paths.DATA                  # 设置 / token 等要写的东西
 
 # hook 事件 -> 状态。只用安全的事件，不介入权限决策。
 EVENT_STATE = {
@@ -51,7 +54,7 @@ _sessions = {}            # key(tmux 窗口名或 session_id) -> dict
 _hud_keep = {"at": 0.0}   # HUD 报「鼠标还在我身上」，用来推迟自动收起
 _want = {}                # 页面请求宿主做的事（比如把控制台窗口叫出来），托盘程序来取
 _geom = {}                # 旧版胶囊留下的，现在没人用了
-CAP_FILE = os.path.join(ROOT, "capsule.json")
+CAP_FILE = paths.data("capsule.json")
 _cap = {"skin": "", "anim": "island", "pet": "octopus"}   # 空 skin = 跟随键盘主题
 try:
     _cap.update(json.load(open(CAP_FILE, encoding="utf-8")))
@@ -60,7 +63,7 @@ except Exception:
 # ── 总开关 ──────────────────────────────────────────────────────
 # claude=False 时这就是一个纯键盘灯效工具：没有胶囊、没有 vibe、不连服务器、不问额度。
 # 只用键盘的人不用面对那一堆跟 Claude 有关的东西。默认关。
-SET_FILE = os.path.join(ROOT, "settings.json")
+SET_FILE = paths.data("settings.json")
 _settings = {"claude": False, "ssh_host": ""}
 try:
     _settings.update(json.load(open(SET_FILE, encoding="utf-8")))
@@ -258,7 +261,7 @@ class Base(SimpleHTTPRequestHandler):
                 print("[额度] 警告：这串不是 sk-ant- 开头，可能不是 setup-token 的输出",
                       flush=True)
             try:
-                with open(os.path.join(ROOT, ".token"), "w", encoding="utf-8") as f:
+                with open(paths.data(".token"), "w", encoding="utf-8") as f:
                     f.write(tok)
             except Exception as e:
                 return self._json({"ok": False, "why": str(e)}, 500)

@@ -15,11 +15,14 @@ PIL 出图 + UpdateLayeredWindow 逐像素透明，圆角真正抗锯齿。
 """
 import colorsys
 import os
+
+import paths
 import re
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-ART_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "art")
+ART_DIR = paths.res("art")          # 自带图；用户自己的图放 DATA 那份
+ART_USER = paths.data("art")
 
 # ── 皮肤 ────────────────────────────────────────────────────────────
 SKINS = {
@@ -392,8 +395,12 @@ class Renderer:
             if not n:
                 continue
             for ext in (".png", ".webp", ".gif", ".jpg", ".jpeg"):
-                fp = os.path.join(ART_DIR, str(n) + ext)
-                if os.path.exists(fp):
+                # 用户自己放的图优先 —— 打包成 exe 后 ART_DIR 是临时解压目录，
+                # 用户只能往 exe 旁边的 art/ 放东西。
+                fp = next((q for q in (os.path.join(ART_USER, str(n) + ext),
+                                       os.path.join(ART_DIR, str(n) + ext))
+                           if os.path.exists(q)), None)
+                if fp:
                     try:
                         return Image.open(fp)
                     except Exception:

@@ -30,13 +30,23 @@
 
 ## 安装
 
-要求:Windows 10/11、Python 3.11+、键盘走 **2.4G 接收器或有线**(蓝牙模式下驱动认不出键盘,这是键盘固件的限制)。
+要求:Windows 10/11,键盘走 **2.4G 接收器或有线**(蓝牙模式下驱动认不出键盘,这是键盘固件的限制)。
+
+**普通用法 —— 不用装 Python:**
+
+去 [Releases](https://github.com/Wednesque/yogodot/releases/latest) 下 `YogoDot-windows.zip`,解压到任意目录,双击 `YogoDot.exe`。
+
+设置、图案选择、配置备份都写在 exe 旁边;如果你把它放在 Program Files 这种没写权限的地方,会自动改写到 `%LOCALAPPDATA%\YogoDot`。
+
+**从源码跑**(想改代码的话):
 
 ```bash
 pip install -r requirements.txt
 ```
 
-然后双击 `yogo.pyw`。它会:
+然后双击 `yogo.pyw`。自己打包成 exe 跑 `build.cmd`(用独立 venv,不动你全局环境)。
+
+两种方式都会:
 
 - 常驻托盘,左键点托盘图标开控制台,右键菜单里有「开机自启」开关
 - 自动建开始菜单和桌面快捷方式

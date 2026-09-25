@@ -28,6 +28,7 @@ import urllib.request
 import winreg
 
 import capsule
+import paths
 
 W, H = 470, 120              # 胶囊本体尺寸（DIP）—— 不是通栏横条，是一块悬浮方块
 GAP = 14                     # 离屏幕上沿的距离，脱开边缘才像悬浮的东西
@@ -40,7 +41,7 @@ COLLAPSE_MS = 200            # 收起要干脆，回弹只放在展开上
 AUTO_HIDE_S = 2              # 完全展开后停留多久（默认；控制台里可调 1.5/2/3）
 ENABLED = False              # Claude 模式总开关。关着时：中键不管、胶囊不弹、不拉数据。
                              # 窗口和钩子照常建（必须在主线程建），只是不干活，这样能随时开关。
-PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".hudprofile")
+PROFILE = paths.data(".hudprofile")
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)

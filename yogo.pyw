@@ -23,16 +23,19 @@ import threading
 import time
 import urllib.request
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+import paths
+
+HERE = paths.RES                   # 程序自带的文件
+DATA = paths.DATA                  # 要写的文件
 sys.path.insert(0, HERE)
-os.chdir(HERE)
+os.chdir(DATA)
 
 import hud                      # noqa: E402  —— 里面会先声明 DPI 感知，必须早导入
 import server                   # noqa: E402
 
 SERVER = "http://127.0.0.1:%d" % server.PORT
-ICON = os.path.join(HERE, "yogo.ico")
-LOG = os.path.join(HERE, "yogo.log")
+ICON = paths.data("yogo.ico")
+LOG = paths.data("yogo.log")
 APP = "YOGO 键盘"
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -142,7 +145,7 @@ class Console:
     @staticmethod
     def page_ver():
         try:
-            return int(os.path.getmtime(os.path.join(HERE, "yogo.html")))
+            return int(os.path.getmtime(os.path.join(paths.RES, "yogo.html")))
         except OSError:
             return int(time.time())
 

@@ -20,6 +20,8 @@ Claude Code 自己的 /usage 面板走的就是这个端点：
 """
 import json
 import os
+
+import paths
 import sys
 import time
 import urllib.error
@@ -104,7 +106,7 @@ def _dig(o):
 def _from_local():
     """`claude setup-token` 生成的长期 token，放在这两个地方任一个都行。
     这是官方给自动化用的入口 —— 不去撬桌面端那个加密存储。"""
-    for p in (os.path.join(os.path.dirname(os.path.abspath(__file__)), ".token"),
+    for p in (paths.data(".token"),
               os.path.expanduser("~/.yogo-token")):
         try:
             t = open(p, encoding="utf-8").read().strip()
@@ -250,7 +252,7 @@ def main():
         print("!! 还没有可用的 token。在终端跑一次：")
         print("     claude setup-token")
         print("   把它给出的那串粘到  %s  里就行（只存本机，不会外发）"
-              % os.path.join(os.path.dirname(os.path.abspath(__file__)), ".token"))
+              % paths.data(".token"))
         return 1
     probe = "--probe" in sys.argv
     wait = POLL
