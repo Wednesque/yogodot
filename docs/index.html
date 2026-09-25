@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>YogoDot — ATK YOGO 75 PRO 点阵屏 / 背光第三方控制工具（ATK HUB 替代）</title>
-<meta name="description" content="ATK YOGO 75 PRO（YOGO 75）键盘的点阵屏和 RGB 背光第三方控制软件，不依赖 ATK HUB 驱动。像素图案库、主题、动画、番茄钟、锁屏熄屏省电，开源免费。Third-party controller for the ATK YOGO 75 PRO dot-matrix screen, an ATK HUB alternative.">
+<meta name="description" content="ATK YOGO 75 PRO（YOGO 75）键盘的点阵屏和 RGB 背光第三方控制软件，不依赖 ATK HUB 驱动。像素图案库、主题、动画、番茄钟、锁屏熄屏省电。免安装，开源免费。Third-party controller for the ATK YOGO 75 PRO dot-matrix screen, an ATK HUB alternative.">
 <meta name="keywords" content="ATK YOGO 75 PRO, YOGO 75, YOGO75 PRO, ATK HUB, ATK 驱动, 点阵屏, 像素屏, 键盘背光, 机械键盘, 第三方驱动, 开源">
 <link rel="canonical" href="https://wednesque.github.io/yogodot/">
 <meta property="og:title" content="YogoDot — ATK YOGO 75 PRO 点阵屏 / 背光第三方控制工具">
@@ -119,10 +119,10 @@
       <p class="lead">官方驱动只能往那块「像素屏」里写一张静态图。YogoDot 直接跟键盘的 HID 通道说话 ——
         6×6 点阵和 84 颗按键背光，逐像素全彩，想怎么刷怎么刷。</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/Wednesque/yogodot/releases/latest">下载最新版</a>
+        <a class="btn primary" href="https://github.com/Wednesque/yogodot/releases/latest/download/YogoDot-windows.zip">下载 · 免安装 15MB</a>
         <a class="btn" href="https://github.com/Wednesque/yogodot">源码 · GitHub</a>
       </div>
-      <div class="meta">Windows 10/11 · Python 3.11+ · 2.4G 接收器或有线 · MIT</div>
+      <div class="meta">Windows 10/11 · 不用装 Python · 2.4G 接收器或有线 · MIT</div>
     </div>
     <div>
       <div class="bezel">
@@ -163,12 +163,16 @@
 
   <section id="install">
     <h2>安装</h2>
-    <p class="sub">三步。键盘要用 2.4G 接收器或有线连接 —— 蓝牙模式下固件不开放控制通道。</p>
+    <p class="sub">不用装 Python，不用命令行。键盘要用 2.4G 接收器或有线连接 —— 蓝牙模式下固件不开放控制通道。</p>
     <ol class="steps">
-      <li><b>装 Python</b><p style="margin:4px 0 0;color:var(--dim);font-size:14px">Windows 10/11，Python 3.11 或更新。<a href="https://www.python.org/downloads/windows/">python.org</a> 下载，安装时勾上「Add to PATH」。</p></li>
-      <li><b>装依赖</b><p style="margin:4px 0 0;color:var(--dim);font-size:14px">解压 <a href="https://github.com/Wednesque/yogodot/releases/latest">下载的 zip</a>，在目录里跑：</p><pre>pip install -r requirements.txt</pre></li>
-      <li><b>双击 <code>yogo.pyw</code></b><p style="margin:4px 0 0;color:var(--dim);font-size:14px">它会进托盘。左键点托盘图标开控制台，右键菜单里有开机自启开关。</p></li>
+      <li><b>下载</b><p style="margin:4px 0 0;color:var(--dim);font-size:14px"><a href="https://github.com/Wednesque/yogodot/releases/latest/download/YogoDot-windows.zip">YogoDot-windows.zip</a>，约 15MB。</p></li>
+      <li><b>解压到任意目录</b><p style="margin:4px 0 0;color:var(--dim);font-size:14px">设置和图案选择会存在 <code>YogoDot.exe</code> 旁边，所以别放在 <code>C:\Program Files</code>（放了也能跑，会自动改存到 <code>%LOCALAPPDATA%</code>）。</p></li>
+      <li><b>双击 <code>YogoDot.exe</code></b><p style="margin:4px 0 0;color:var(--dim);font-size:14px">它会进托盘。左键点托盘图标开控制台，右键菜单里有开机自启开关。</p></li>
     </ol>
+    <p class="note" style="margin-top:20px"><b>Windows 会拦一下。</b>这个 exe 没买代码签名证书（一年好几千，开源小工具就算了），
+      所以第一次运行 SmartScreen 会弹「已保护你的电脑」。点<b>「更多信息」→「仍要运行」</b>即可。
+      介意的话可以看 <a href="https://github.com/Wednesque/yogodot">源码</a> 自己用仓库里的 <code>build.cmd</code> 打包，产物一模一样。</p>
+    <p class="note" style="margin-top:12px">想改代码就从源码跑：<code>pip install -r requirements.txt</code> 之后双击 <code>yogo.pyw</code>。</p>
   </section>
 
   <section id="claude">
@@ -190,6 +194,8 @@
       <dt>会不会写坏键盘？</dt><dd>点阵和背光都走 RAM 推流，不写 flash。配置读-改-写只在换模式时发生一次，原厂配置第一次读到就存成 <code>config.bak</code>，能整块推回去。</dd>
       <dt>程序退出后键盘会怎样？</dt><dd>回到固件默认画面（一个红色的 0）。灯效内容不存在键盘里，下次启动自动补推。</dd>
       <dt>Mac / Linux？</dt><dd>目前只有 Windows，HID 层是 Win32 API。协议本身是通用的，欢迎移植。</dd>
+      <dt>为什么 Windows 说它不安全？</dt><dd>没买代码签名证书而已。第一次运行点「更多信息 → 仍要运行」。源码全公开，也可以自己用 <code>build.cmd</code> 打包。</dd>
+      <dt>要联网吗？</dt><dd>纯键盘模式完全不联网。只有打开 Claude 模式、并且你自己配了账号或服务器，才会去读额度。</dd>
     </dl>
     <p class="en"><b>English:</b> YogoDot is a third-party controller for the <b>ATK YOGO 75 PRO</b> keyboard's 6×6 dot-matrix screen and per-key RGB backlight — an alternative to the official ATK HUB driver. Pure Python + Windows HID, no flash writes. Pixel art library, themes, animations, pomodoro, power saving (blank on lock / idle). Optional Claude mode shows Claude Code quota and session state. Windows only; 2.4G dongle or wired.</p>
   </section>
