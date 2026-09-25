@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>YOGO 控制台</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   :root{
     --ink:#0A0910;--panel:#14121C;--panel2:#1B1826;--line:#2E2840;--line2:#3B3552;
@@ -256,9 +254,8 @@
       </div><!-- /claudeOnly -->
 
       <div class="note" style="margin-top:14px">
-        点阵屏和背光都走 <b>RAM 推流</b>，不写 flash，随便刷。代价是必须这页开着 ——
-        键盘自己不存这些内容，关机即丢，重连时这页会自动补推。<br>
-        背光亮度已拉满（90）—— 上灯位本来就偏暗。<br>
+        画面是实时发给键盘的，<b>不存进键盘里</b> —— 所以软件要在后台开着；
+        关掉后键盘上留着最后一个画面，重新打开会自动补上。只有切换背光模式时会改一次键盘设置。<br>
         休眠调长了状态灯才等得到你回来，代价是耗电 —— 15 分钟是我建议的平衡点。
       </div>
     </aside>
@@ -2030,7 +2027,7 @@ function syncDynBtn(){
   $("dynBtn").textContent = THEME_DYN ? "动态" : "静态";
   $("dynBtn").classList.toggle("primary", THEME_DYN);
   $("dynHint").textContent = THEME_DYN
-    ? "点阵屏和键盘一起动 · 12fps · 走 RAM 不吃 flash"
+    ? "点阵屏和键盘一起动 · 为省电限速：点阵约 6 帧/秒，键盘灯 2 帧/秒"
     : "点阵屏和键盘都定格，最省电";
 }
 $("dynBtn").addEventListener("click", ()=>{

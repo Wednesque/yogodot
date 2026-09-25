@@ -118,7 +118,8 @@ class Keyboard:
         self.blanked = False                          # 空闲/锁屏熄屏中
         self.locked = False                           # 综合判定：锁屏了
         self.session_locked = None                    # 系统 WTS 通知给的权威值（None=还没收到过）
-        self._saved = (None, None)                    # 熄屏前的画面，醒来推回去
+        self._mx_off = self._ky_off = False           # 点阵 / 键盘灯此刻是否被我们熄了
+        self._saved_mx = self._saved_ky = None        # 熄着时上层最新想显示的画面
         self._idler = None
 
     # ── 打开 / 关闭 ────────────────────────────────────────────────
@@ -407,27 +408,33 @@ class Keyboard:
         """这一刻允许推多快、推不推。返回
         (点阵最小间隔, 键盘灯最小间隔, 点阵保活, 键盘灯保活, 可推键盘灯?, 可推点阵?)
 
-        只按电量分档，不分有线无线 —— 平时基本都是无线在用，与其分两套不如
-        一直按省电的那套来，省得插一次线就把功耗习惯带回去。
-        电量读不到时按满电处理：宁可多推，也不要因为读不到电量把屏黑了。
+        推不推由熄灯状态决定（_ky_off / _mx_off，见 _idle_loop），
+        速度只有一套省电档，不分有线无线。
         """
-        if self.blanked:                    # 熄屏中：上层推什么都挡掉
-            return (MIN_MATRIX_GAP, MIN_KEYS_GAP, SAME_MATRIX_HOLD, SAME_KEYS_HOLD,
-                    False, False)
-        pct = 100 if not self._pw else self._pw["pct"]
-        if self._pw and self._pw.get("charging"):
-            pct = max(pct, 100)             # 在充电就别降级了
         return (MIN_MATRIX_GAP, MIN_KEYS_GAP, SAME_MATRIX_HOLD, SAME_KEYS_HOLD,
-                pct > BATT_KEYS_OFF, pct > BATT_ALL_OFF)
+                not self._ky_off, not self._mx_off)
+
+    def _want_off(self):
+        """现在点阵 / 键盘灯各自该不该灭。三个理由：锁屏、离开太久、电量低。"""
+        away = self.locked or idle_secs() >= IDLE_BLANK_S
+        pw = self._pw
+        low_keys = low_all = False
+        if pw and not pw.get("charging"):   # 读不到电量 / 在充电：不因电量降级
+            low_keys = pw["pct"] <= BATT_KEYS_OFF
+            low_all = pw["pct"] <= BATT_ALL_OFF
+        return (away or low_all), (away or low_keys), away
 
     def _idle_loop(self):
-        """人走了就熄屏（锁屏立刻、空闲三分钟），人回来就把画面推回去。
+        """该灭的时候真灭，该亮的时候把最新的画面推回去。
 
-        熄屏 = 键盘灯推全黑 + 点阵推全黑，**不退出推流态**。之前用 close_sync_led
-        退出推流，结果固件把点阵屏从存储里的图重画了一遍，锁了屏点阵还亮着。
-        专注模式一直是推全黑，那条路是验证过的。
+        「灭」一定是推一帧全黑，**不是停止推送** —— 停推的话最后一帧会一直亮着，
+        等于没省电（低电量降级第一版就栽在这）。也不退出推流态：之前用
+        close_sync_led 退出，固件会把点阵从存储里的图重画一遍，锁了屏点阵还亮。
 
-        锁屏判定两路：系统 WTS 通知（hud 窗口收到 LOCK/UNLOCK 就写 session_locked，
+        灭着的时候上层推来的画面不丢，记成「最新意图」（push_* 里写 _saved_*），
+        恢复时推的是它 —— 期间换了主题，回来看到的就是新主题。
+
+        锁屏判定两路：系统 WTS 通知（hud 窗口收到 LOCK/UNLOCK 写 session_locked，
         权威）；没收到过通知时退回 OpenInputDesktop 轮询（要去抖，UAC 也会让它失败）。
         """
         lock_hits = 0
@@ -439,32 +446,44 @@ class Keyboard:
                     self.locked = self.session_locked
                 else:
                     self.locked = lock_hits >= 2
-                idle = idle_secs()
-                away = self.locked or idle >= IDLE_BLANK_S
-                if away and not self.blanked:
-                    self._saved = (self._matrix_last, self._keys_last)
-                    self.blanked = True
-                    now = time.time()
-                    with self.lock:
-                        if self._keys_last is not None:
-                            self._send_keys(bytes(168), now)
+                try:
+                    self.power()                # 自带 30 秒缓存，不会真的每 2 秒问一次
+                except Exception:
+                    pass
+                mx_off, ky_off, away = self._want_off()
+                now = time.time()
+                why = "锁屏" if self.locked else ("离开" if away else "电量低")
+                with self.lock:
+                    if mx_off and not self._mx_off:
+                        if self._matrix_last and any(self._matrix_last):
+                            self._saved_mx = self._matrix_last
+                        self._mx_off = True
                         self._send_matrix(bytes(108), now)
-                    print("[kbd] 熄屏（%s）" % ("锁屏" if self.locked else "空闲 %d 秒" % idle),
-                          flush=True)
-                elif not away and self.blanked:
-                    self.blanked = False
-                    mx, ky = self._saved
-                    now = time.time()
-                    with self.lock:
-                        if ky:
-                            self._send_keys(ky, now)
-                        if mx:
-                            self._send_matrix(mx, now)
-                    if not mx:
-                        self._matrix_last = None
-                    print("[kbd] 恢复画面", flush=True)
+                        print("[kbd] 点阵熄灭（%s）" % why, flush=True)
+                    elif not mx_off and self._mx_off:
+                        self._mx_off = False
+                        if self._saved_mx:
+                            self._send_matrix(self._saved_mx, now)
+                        else:
+                            self._matrix_last = None
+                        self._saved_mx = None
+                        print("[kbd] 点阵恢复", flush=True)
+                    if ky_off and not self._ky_off:
+                        if self._keys_last and any(self._keys_last):
+                            self._saved_ky = self._keys_last
+                        self._ky_off = True
+                        if self._keys_last is not None:     # 背光在我们手里才去灭
+                            self._send_keys(bytes(168), now)
+                        print("[kbd] 键盘灯熄灭（%s）" % why, flush=True)
+                    elif not ky_off and self._ky_off:
+                        self._ky_off = False
+                        if self._saved_ky:
+                            self._send_keys(self._saved_ky, now)
+                        self._saved_ky = None
+                        print("[kbd] 键盘灯恢复", flush=True)
+                self.blanked = self._mx_off and self._ky_off
             except Exception as e:
-                print("[kbd] 熄屏循环异常：%s" % e, flush=True)
+                print("[kbd] 熄灯循环异常：%s" % e, flush=True)
 
     def _ensure_flusher(self):
         """有待补发的帧时才起补发线程，发完自己退出。"""
@@ -514,8 +533,9 @@ class Keyboard:
         """
         flat = bytes(flat)[:108].ljust(108, NUL)
         gap, _, hold, _, _, allow = self.budget()
-        if not allow:                       # 电量见底：点阵也停，电留给打字
+        if not allow:                       # 灭着：不推，但记住这是最新想显示的
             self._matrix_pending = None
+            self._saved_mx = flat if any(flat) else None
             self.dropped += 1
             return False
         now = time.time()
@@ -538,12 +558,10 @@ class Keyboard:
         同样是限速留着补发，不丢。"""
         data = bytes(rgb565)[:168].ljust(168, NUL)
         _, gap, _, hold, allow, _ = self.budget()
-        if not allow:                       # 低电量：键盘灯先让位
+        if not allow:                       # 灭着：不推，但记住这是最新想显示的
             self._keys_pending = None
+            self._saved_ky = data if any(data) else None
             self.dropped += 1
-            if self._keys_last is not None:
-                self._keys_last = None
-                self.stop_keys()            # 退出推流，让键盘自己回默认灯效
             return False
         now = time.time()
         if data == self._keys_last and now - self._keys_t < hold:
@@ -563,8 +581,7 @@ class Keyboard:
 
         否则熄屏 / 恢复会把「关背光之前」的最后一帧主题配色推回去 ——
         逐键推流不管背光模式是不是 0，照亮。表现就是「关了背光，过一会儿又亮了」。"""
-        self._keys_last = self._keys_pending = None
-        self._saved = (self._saved[0], None)
+        self._keys_last = self._keys_pending = self._saved_ky = None
 
     def stop_keys(self):
         self.send(C_ENDSYNC, 0, b"", 0, wait=False)

@@ -246,6 +246,11 @@ def shape(o, pre="", depth=0):
             shape(o[0], pre, depth + 1)
 
 
+# 由 server 设置：返回 False 时暂停轮询（Claude 模式关掉了）。
+# 直接跑 quota.py 时为 None，照常轮询。
+GATE = None
+
+
 def main():
     tok = token()
     if not tok:
@@ -257,6 +262,9 @@ def main():
     probe = "--probe" in sys.argv
     wait = POLL
     while True:
+        if GATE is not None and not GATE():
+            time.sleep(3)                    # Claude 模式关着：一个请求都不发
+            continue
         try:
             d = fetch(tok)
             if probe:

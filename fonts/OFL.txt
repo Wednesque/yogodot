@@ -1,0 +1,5 @@
+Chakra Petch — Copyright 2018 The Chakra Petch Project Authors (https://github.com/cadsondemak/Chakra-Petch)
+JetBrains Mono — Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+
+Both fonts are licensed under the SIL Open Font License, Version 1.1.
+Full license text: https://openfontlicense.org/open-font-license-official-text/

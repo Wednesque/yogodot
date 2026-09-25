@@ -1,0 +1,8 @@
+/* 本地字体。以前从 Google Fonts 加载：一是违背「纯键盘模式不联网」，
+   二是国内访问 Google 常被墙，样式表挂着等超时，页面半天出不来。
+   两款都是 SIL Open Font License 1.1，可随程序分发。只带 latin 子集，中文走系统字体。 */
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:400;font-display:swap;src:url(chakra-400.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:500;font-display:swap;src:url(chakra-500.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:swap;src:url(chakra-600.woff2) format("woff2")}
+@font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:swap;src:url(chakra-700.woff2) format("woff2")}
+@font-face{font-family:"JetBrains Mono";font-style:normal;font-weight:100 800;font-display:swap;src:url(jetbrains-mono.woff2) format("woff2")}

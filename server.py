@@ -236,6 +236,8 @@ class Base(SimpleHTTPRequestHandler):
                 out = dict(_settings)
             if out["claude"]:
                 start_claude_services()
+            else:
+                stop_claude_services()
             print("[模式] Claude 模式：%s" % ("开" if out["claude"] else "关"), flush=True)
             return self._json(out)
         if p == "/capsule":                     # 控制台里调胶囊：皮肤 / 动画 / 宠物
@@ -467,6 +469,20 @@ SSH_HOST = os.environ.get("YOGO_SSH_HOST") or str(_settings.get("ssh_host") or "
 REMOTE_LOG = "~/.claude/yogo/events.jsonl"
 
 
+_ssh_proc = [None]      # 当前那条 ssh；关 Claude 模式时直接掐断
+
+
+def stop_claude_services():
+    """关 Claude 模式：掐断 ssh。额度轮询自己看 GATE 会停。"""
+    p = _ssh_proc[0]
+    if p and p.poll() is None:
+        try:
+            p.terminate()
+            print("[ssh] Claude 模式关了，断开", flush=True)
+        except Exception:
+            pass
+
+
 def ssh_tail():
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8",
            "-o", "ServerAliveInterval=20", "-o", "ServerAliveCountMax=3",
@@ -475,9 +491,12 @@ def ssh_tail():
            % (REMOTE_LOG, REMOTE_LOG)]
     backoff = 3
     while True:
+        if not claude_on():                  # Claude 模式关着：不连服务器
+            time.sleep(3)
+            continue
         try:
             print("[ssh] 连 %s 拉事件流…" % SSH_HOST, flush=True)
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            proc = _ssh_proc[0] = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                     stderr=subprocess.DEVNULL, bufsize=1,
                                     text=True, encoding="utf-8", errors="replace",
                                     **quiet())
@@ -543,6 +562,7 @@ def start_quota():
         import quota
         if not quota.token():
             return False
+        quota.GATE = claude_on                # 模式关了就暂停，不再问 Anthropic
         threading.Thread(target=quota.main, daemon=True).start()
         _quota_on[0] = True
         return True

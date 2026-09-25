@@ -15,6 +15,7 @@ a = Analysis(
         ('yogo.html', '.'),
         ('designs.js', '.'),
         ('yogo.ico', '.'),
+        ('fonts', 'fonts'),
         ('art', 'art'),
         ('remote', 'remote'),
         ('README.md', '.'),

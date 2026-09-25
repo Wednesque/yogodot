@@ -6,7 +6,7 @@
   2. tmux 窗口名（先看 $TMUX_PANE，再顺着父进程往上找哪个祖先是某个 pane）
      —— 直接在 tmux 里跑的会话走这条。
   3. cwd 的目录名。
-被 claude-yogo-hook.sh / claude-statusline.sh 用 `python3 yogo-name.py` 引入。
+被 claude-yogo-hook.sh / claude-statusline.sh 用 `from yogo_name import resolve` 引入（文件名必须是下划线，横杠导入不了）。
 """
 import glob
 import json

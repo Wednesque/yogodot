@@ -8,7 +8,6 @@ __pycache__/
 config.bak
 capsule.json
 settings.json
-yogo.ico
 art/*
 !art/把图片放这里.txt
 preview_*.png
