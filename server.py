@@ -342,10 +342,12 @@ def kb_api(path, d):
                 kb.forget_keys()
             return {"ok": True, "awake": True, "cfg": list(cfg)}
         if path == "/kb/matrix":
-            kb.push_matrix(bytes(int(v) & 255 for v in (d.get("rgb") or [])))
+            kb.push_matrix(bytes(int(v) & 255 for v in (d.get("rgb") or [])),
+                           force=bool(d.get("force")))
             return {"ok": True, "awake": kb.awake}
         if path == "/kb/keys":
-            kb.push_keys(bytes(int(v) & 255 for v in (d.get("rgb565") or [])))
+            kb.push_keys(bytes(int(v) & 255 for v in (d.get("rgb565") or [])),
+                         force=bool(d.get("force")))
             return {"ok": True, "awake": kb.awake}
         if path == "/kb/stopkeys":
             kb.stop_keys()

@@ -459,17 +459,17 @@ async function patchConfig(patch){
   const d=await kbCall("/kb/config",{bytes});
   return new Uint8Array(d.cfg);
 }
-async function pushMatrix(rgb){
-  try{ return await _pushMatrix(rgb); }
+async function pushMatrix(rgb, force){
+  try{ return await _pushMatrix(rgb, force); }
   catch(e){ lastErr=String(e && e.message || e).slice(0,120); throw e; }
 }
-async function _pushMatrix(rgb){
+async function _pushMatrix(rgb, force){
   const flat=[], k=DOT_BRIGHT/100;
   /* 点阵屏默认走原始意图色 —— 实测它的混色本来就准，套键盘那套校正反而搞坏。
      GAIN_DOT 勾上才同时应用饱和校正和通道增益。 */
   for(const row of rgb) for(const p1 of row){ const px=GAIN_DOT?gr(ledize(p1)):p1;
     flat.push(clamp(px[0]*k),clamp(px[1]*k),clamp(px[2]*k)); }
-  await kbCall("/kb/matrix",{rgb:flat});
+  await kbCall("/kb/matrix",{rgb:flat, force:!!force});
   frames++; pushOK++; lastErr=""; drawPreview(rgb);
 }
 
@@ -562,7 +562,7 @@ let KB_OFF=localStorage.getItem("yogo_kboff")==="1";   // 只亮点阵屏：键�
    为 null 时才走我们自己的逐键推流（模式 254）。 */
 let FW_FX=(()=>{ const v=localStorage.getItem("yogo_fwfx");
   return (v===null||v==="") ? null : +v; })();   // 只亮点阵屏：键盘灯全熄，屏照常
-async function pushKeys(arr){
+async function pushKeys(arr, force){
   if(FW_FX!=null||KB_OFF){ drawKeyboard(new Array(KB_N).fill([0,0,0])); return; }  // 交给固件 / 已关，一个字节都不发
   const p=[], k=KB_BRIGHT/100;
   for(let i=0;i<KB_N;i++){
@@ -571,7 +571,7 @@ async function pushKeys(arr){
     const v=((R>>3&31)<<11)|((G>>2&63)<<5)|(B>>3&31);
     p.push(v&255, (v>>8)&255);
   }
-  await kbCall("/kb/keys",{rgb565:p});
+  await kbCall("/kb/keys",{rgb565:p, force:!!force});
   drawKeyboard(arr);
 }
 const stopKeys=()=>kbCall("/kb/stopkeys").catch(()=>{});
@@ -1671,7 +1671,7 @@ function runAnim(fn,fps,ms){
   let h=null; if(ms) h=setTimeout(()=>{ stopped=true; stopFn=null; liveFn=null; applyMode(MODE,true); }, ms);
   stopFn=()=>{ stopped=true; if(h)clearTimeout(h); };
 }
-async function showStatic(rgb){ stopAnim(); try{ await pushMatrix(rgb); }catch(e){} }
+async function showStatic(rgb){ stopAnim(); try{ await pushMatrix(rgb, true); }catch(e){} }
 
 /* 背光走推流：进一次流式模式（一次 flash 写），之后全部是 RAM，随便刷 */
 let streamOn=null, lightNow=null;
@@ -1734,7 +1734,7 @@ async function setLight(color, bright){
   if(k===lightNow) return; lightNow=k;
   await enterStreamMode();
   const c = (!color||!bright) ? [0,0,0] : color.map(v=>clamp(v*bright/90));
-  try{ await pushKeys(new Array(KB_N).fill(c)); }catch(e){ lightNow=null; }
+  try{ await pushKeys(new Array(KB_N).fill(c), true); }catch(e){ lightNow=null; }
 }
 async function setSleepMinutes(min){
   const s=Math.max(60, Math.min(0xFFFFFF, min*60));
@@ -1791,20 +1791,21 @@ function setMode(id){
 }
 async function applyMode(id, isReattach){
   if(!dev) return;
+  stopAnim();                       // 模式切换先停旧循环
   /* 离开 vibe：别的模式会把键盘灯覆盖掉，所以忘记「灯已经是这个主题了」，
      下次回 vibe 必须重推一次。 */
   if(id!=="vibe") vibeKb=null;
   if(id==="startup"){ playStartup(); return; }
   if(id==="focus"){ stopAnim(); lightNow=null;
     await enterStreamMode();
-    try{ await pushKeys(new Array(KB_N).fill([0,0,0])); await pushMatrix(blank()); }catch(e){}
+    try{ await pushKeys(new Array(KB_N).fill([0,0,0]), true); await pushMatrix(blank(), true); }catch(e){}
     $("focusDot").classList.add("on"); $("focusTxt").textContent="已启用"; return; }
   $("focusDot").classList.remove("on"); $("focusTxt").textContent="未启用";
   if(id==="theme"){ applyTheme(THEME); return; }
   if(id==="pomodoro"){ lightNow=null; if(await enterStreamMode()) pomPaint(); return; }
   if(id==="vibe"){ if(await enterStreamMode()) vibePaint(); return; }
 }
-/** 主题运行器：点阵屏 + 键盘一起驱动。静态 = 低速定格刷新，动态 = 12fps 一起动 */
+/** 主题运行器：点阵屏 + 键盘一起驱动。静态 = 推一次，动态 = 低帧率一起动 */
 function runTheme(t, dyn){
   stopAnim(); lightNow=null;
   if(ART_PICK && STATICS[ART_PICK.name]){       // 画廊里挑过图：主题的点阵图让位
@@ -1812,10 +1813,8 @@ function runTheme(t, dyn){
     return;
   }
   if(!dyn){
-    /* 静态主题：推一帧就完事，之后零流量。
-       官方 HUB 也是这么干的 —— 图写进设备就不用再管，反复推只是白耗电。
-       （以前这里按 1.2fps 一直刷一张静止的图。） */
-    (async()=>{ try{ await pushKeys(t.kb(0)); await pushMatrix(rows2rgb(t.dot)); }catch(e){} })();
+    /* 静态主题：推一帧就完事，之后零流量。 */
+    (async()=>{ try{ await pushKeys(t.kb(0), true); await pushMatrix(rows2rgb(t.dot), true); }catch(e){} })();
     liveFn=null;
     return;
   }
@@ -1834,11 +1833,13 @@ function runTheme(t, dyn){
   liveFn=null;
 }
 async function applyTheme(k){
+  stopAnim();                       // 先停旧循环，别在切配置时继续画旧主题
   THEME=k; localStorage.setItem("yogo_theme",k);
   syncPickUI();
   if(!await enterStreamMode()){ console.warn("applyTheme 中止：", lastErr); return; }
   markAwake();
-  runTheme(THEMES[k], THEME_DYN);
+  try{ runTheme(THEMES[k], THEME_DYN); }
+  catch(e){ lastErr=String(e&&e.message||e).slice(0,120); }
 }
 
 /* 启动模式：开机检测日期，跨天就换下一个主题 */
@@ -1855,10 +1856,11 @@ function rotateThemeIfNewDay(){
   return true;
 }
 async function playStartup(){
+  stopAnim();
   const t=THEMES[THEME];
   $("todayAnim").textContent=t.name;
   if(!await enterStreamMode()) return;
-  runTheme(t, true);                              // 入场一律跑动态，够热闹
+  runTheme(t, true);                                // 入场一律跑动态，够热闹
   setTimeout(()=>{ if(MODE==="startup") setMode(LAST_RESIDENT); }, 12000);
 }
 $("playStartup").addEventListener("click", playStartup);
@@ -1946,7 +1948,7 @@ async function artPush(rows, idx){
   const fn=ART_LAYOUTS[idx%ART_LAYOUTS.length];
   stopAnim();
   if(!await enterStreamMode()) return;
-  try{ await pushKeys(fn(a,b)(0)); await pushMatrix(rows2rgb(rows)); }catch(e){}
+  try{ await pushKeys(fn(a,b)(0), true); await pushMatrix(rows2rgb(rows), true); }catch(e){}
 }
 async function showArt(name, idx){
   const rows=STATICS[name]; if(!rows) return;
@@ -2053,7 +2055,7 @@ function repaintNow(){
 /* 白平衡校准 */
 let calTest=false;
 const CAL_YELLOW=[255,255,0];                       // R=G 的纯黄，校准基准
-const paintCal=()=>pushKeys(new Array(KB_N).fill(CAL_YELLOW)).catch(()=>{});
+const paintCal=()=>pushKeys(new Array(KB_N).fill(CAL_YELLOW), true).catch(()=>{});
 const GID=[["gR","gRv",0],["gG","gGv",1],["gB","gBv",2]];
 function syncGain(){ GID.forEach(([id,lab,i])=>{
   const p=Math.round(GAIN[i]*100); $(id).value=String(p); $(lab).textContent=p+"%"; }); }
@@ -2087,7 +2089,7 @@ async function sweepBlocks(ch, lo, hi){
   const gains=[0,1,2,3].map(i=>lo+(hi-lo)*(i+0.5)/4);
   RAW=true;
   await pushKeys(eachKey((r,c)=>{
-    const col=base.slice(); col[ch]=col[ch]*gains[Math.min(3,Math.floor(c/4))]; return col; }));
+    const col=base.slice(); col[ch]=col[ch]*gains[Math.min(3,Math.floor(c/4))]; return col; }), true);
   RAW=false;
 
   const box=$("calPick"); box.hidden=false; box.innerHTML="";
@@ -2263,8 +2265,8 @@ function pomPaint(){
     return;
   }
   if(pomState==="idle"){ stopAnim();
-    pushKeys(THEMES[THEME].kb(0)).catch(()=>{});
-    pushMatrix(rows2rgb(STATICS.tomato)).catch(()=>{});
+    pushKeys(THEMES[THEME].kb(0), true).catch(()=>{});
+    pushMatrix(rows2rgb(STATICS.tomato), true).catch(()=>{});
     return; }
   stopAnim();                                 // 专注/休息：2fps 足够，安静省电
   let stopped=false,busy=false; const t0=performance.now();
@@ -2479,11 +2481,11 @@ function vibePaint(){
   stopAnim();                         // 注意：这里会把 vibeSig 清掉
   vibeSig = sig;
   /* 键盘灯只跟主题走，跟会话状态无关。主题没换就别重推。 */
-  if(vibeKb!==THEME){ vibeKb=THEME; pushKeys(THEMES[THEME].kb(0)).catch(()=>{}); }
+  if(vibeKb!==THEME){ vibeKb=THEME; pushKeys(THEMES[THEME].kb(0), true).catch(()=>{}); }
   if(st==="idle"){
     /* 没事的时候宠物睡觉：一帧定格，不开循环。以前 2fps 呼吸 + 飘 Z，
        看着可爱，但意味着大多数时间流量永远不断。省电优先。 */
-    pushMatrix(petFrame(0, st)).catch(()=>{});
+    pushMatrix(petFrame(0, st), true).catch(()=>{});
     return;
   }
   const fps = st==="busy" ? 5 : 12;

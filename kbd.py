@@ -45,6 +45,9 @@ MIN_MATRIX_GAP = 0.16        # 点阵最快 ~6fps（36 个点，便宜）
 MIN_KEYS_GAP = 0.5           # 键盘灯最快 2fps（84 颗灯，耗电大头，砍最狠）
 SAME_MATRIX_HOLD = 600.0     # 画面没变：十分钟补推一次保活就够（图在设备里不会自己丢）
 SAME_KEYS_HOLD = 900.0       # 键盘灯静态画面：十五分钟一次
+PACKET_GAP = 0.003           # 同一帧内包与包之间留一点空，别把 2.4G 链路的按键上报挤掉
+TYPING_GUARD = True          # 最近有键鼠输入时，非必要的画面先让路
+TYPING_GUARD_MS = 250
 BATT_KEYS_OFF = 20           # 低于这个电量：不再推键盘灯
 BATT_ALL_OFF = 8             # 低于这个：连点阵也停，把电留给打字
 # 真正的耗电大头是「灯一直亮着」，不是推帧的频率 —— 停止推流并不会让灯灭，
@@ -89,6 +92,36 @@ def idle_secs():
     now = _k32.GetTickCount64() & 0xFFFFFFFF
     d = (now - li.dwTime) & 0xFFFFFFFF
     return d / 1000.0
+
+
+def recent_input(ms=None):
+    """最近 ms 毫秒内有键鼠输入（GetLastInputInfo，鼠标移动也算）。
+
+    这是键盘钩子没装时的兜底；正常走 recent_key_input()，只认键盘。
+    """
+    li = LASTINPUTINFO()
+    li.cbSize = ctypes.sizeof(li)
+    if not _u32.GetLastInputInfo(ctypes.byref(li)):
+        return False                   # 查不到就别妨碍推流
+    now = _k32.GetTickCount64() & 0xFFFFFFFF
+    d = (now - li.dwTime) & 0xFFFFFFFF
+    return d < (TYPING_GUARD_MS if ms is None else ms)
+
+
+_last_key = [0.0]
+
+
+def note_key():
+    """低级键盘钩子回调里调用：只记时间戳，不看键值、不拦按键。"""
+    _last_key[0] = time.time()
+
+
+def recent_key_input(ms=None):
+    """最近 ms 毫秒内按过键盘。钩子没装时退回 GetLastInputInfo。"""
+    t = _last_key[0]
+    if t:
+        return (time.time() - t) * 1000.0 < (TYPING_GUARD_MS if ms is None else ms)
+    return recent_input(ms)
 
 
 class Keyboard:
@@ -304,11 +337,11 @@ class Keyboard:
                 self.pending.pop(my, None)
 
     # ── 协议层 ─────────────────────────────────────────────────────
-    def handshake(self, force=False):
+    def handshake(self, force=False, wait=True):
         now = time.time()
         if not force and now - self.last_hand < HAND_EVERY:
             return
-        self.send(C_HAND, 0, b"", 0)
+        self.send(C_HAND, 0, b"", 0, wait=wait)
         self.last_hand = now
 
     def power(self, force=False):
@@ -322,24 +355,25 @@ class Keyboard:
         不要再加「电量涨过就算充电」这类猜测 —— 它拔线后要滞后三分钟才反应过来。
         """
         now = time.time()
-        if not force and self._pw and now - self._pw_t < POWER_EVERY:
+        with self.lock:
+            if not force and self._pw and now - self._pw_t < POWER_EVERY:
+                return self._pw
+            try:
+                self.handshake()
+                r = self.send(C_POWER, 0, b"", 0)
+            except Exception:
+                return self._pw
+            if not r or len(r) < 11:
+                return self._pw                 # 读不到就沿用上一次，别把界面清空
+            pct, flag = min(100, r[9]), r[10]
+            if not self._pw or self._pw["pct"] != pct:
+                print("[batt] %d%%  %s  %s" % (pct, "有线" if self.wired else "无线",
+                                             "熄屏中" if self.blanked else "亮着"), flush=True)
+            self._pw = {"pct": pct,
+                        "charging": bool((flag != 0 or self.wired) and pct < 100),
+                        "wired": self.wired, "flag": flag}
+            self._pw_t = now
             return self._pw
-        try:
-            self.handshake()
-            r = self.send(C_POWER, 0, b"", 0)
-        except Exception:
-            return self._pw
-        if not r or len(r) < 11:
-            return self._pw                 # 读不到就沿用上一次，别把界面清空
-        pct, flag = min(100, r[9]), r[10]
-        if not self._pw or self._pw["pct"] != pct:
-            print("[batt] %d%%  %s  %s" % (pct, "有线" if self.wired else "无线",
-                                         "熄屏中" if self.blanked else "亮着"), flush=True)
-        self._pw = {"pct": pct,
-                    "charging": bool((flag != 0 or self.wired) and pct < 100),
-                    "wired": self.wired, "flag": flag}
-        self._pw_t = now
-        return self._pw
 
     def read_config(self):
         """64 字节配置。三次重试并强制重新握手 —— 键盘刚醒时第一次多半没人应答。"""
@@ -348,21 +382,22 @@ class Keyboard:
             if attempt:
                 time.sleep(0.22)
                 self.last_hand = 0
-            self.handshake()
-            cfg = bytearray(64)
-            ok = True
-            for off, ln in ((0, 24), (24, 24), (48, 16)):
-                r = self.send(C_READ, off, b"", ln)
-                if not r or len(r) < 9 + ln:
-                    ok = False
-                    last = "读配置超时"
-                    break
-                cfg[off:off + ln] = r[9:9 + ln]
-            if ok:
-                self.awake = True
-                self.err = ""
-                self._backup(bytes(cfg))
-                return bytes(cfg)
+            with self.lock:
+                self.handshake()
+                cfg = bytearray(64)
+                ok = True
+                for off, ln in ((0, 24), (24, 24), (48, 16)):
+                    r = self.send(C_READ, off, b"", ln)
+                    if not r or len(r) < 9 + ln:
+                        ok = False
+                        last = "读配置超时"
+                        break
+                    cfg[off:off + ln] = r[9:9 + ln]
+                if ok:
+                    self.awake = True
+                    self.err = ""
+                    self._backup(bytes(cfg))
+                    return bytes(cfg)
         self.awake = False
         self.err = last or "读配置超时"
         raise TimeoutError(self.err)
@@ -390,18 +425,20 @@ class Keyboard:
         return cfg
 
     def write_config(self, cfg):
-        self.handshake()
-        self.send(C_ENDSYNC, 0, b"", 0)
-        for off, ln in ((0, 24), (24, 24), (48, 16)):
-            self.send(C_WRITE, off, bytes(cfg[off:off + ln]))
+        with self.lock:
+            self.handshake()
+            self.send(C_ENDSYNC, 0, b"", 0)
+            for off, ln in ((0, 24), (24, 24), (48, 16)):
+                self.send(C_WRITE, off, bytes(cfg[off:off + ln]))
 
     def patch_config(self, patch):
         """读-改-写：patch 是 {字节偏移: 值}，只动指定字节。"""
-        cfg = bytearray(self.read_config())
-        for k, v in patch.items():
-            cfg[int(k)] = max(0, min(255, int(v)))
-        self.write_config(cfg)
-        return bytes(cfg)
+        with self.lock:
+            cfg = bytearray(self.read_config())
+            for k, v in patch.items():
+                cfg[int(k)] = max(0, min(255, int(v)))
+            self.write_config(cfg)
+            return bytes(cfg)
 
     # ── 省电闸门 ───────────────────────────────────────────────────
     def budget(self):
@@ -498,12 +535,15 @@ class Keyboard:
             if self._matrix_pending is None and self._keys_pending is None:
                 return
             try:
-                now = time.time()
                 mgap, kgap = self.budget()[0], self.budget()[1]
                 with self.lock:
+                    if TYPING_GUARD and recent_key_input():
+                        continue            # 打字优先，补发帧先等着
+                    now = time.time()
                     p = self._matrix_pending
                     if p is not None and now - self._matrix_t >= mgap:
                         self._send_matrix(p, now)
+                    now = time.time()
                     p = self._keys_pending
                     if p is not None and now - self._keys_t >= kgap:
                         self._send_keys(p, now)
@@ -512,69 +552,91 @@ class Keyboard:
                 return
 
     def _send_matrix(self, flat, now):
-        self._matrix_pending = None
-        self.handshake()
-        for i in range(5):
-            self.send(C_MATRIX, i * 24, flat[i * 24:i * 24 + 24].ljust(24, NUL), wait=False)
-        self._matrix_last, self._matrix_t = flat, now
+        with self.lock:
+            self._matrix_pending = None
+            # 先占住时间槽：并发进来的一律走补发，不能各自再发一整帧
+            self._matrix_t = now
+            self.handshake(wait=False)
+            for i in range(5):
+                self.send(C_MATRIX, i * 24, flat[i * 24:i * 24 + 24].ljust(24, NUL), wait=False)
+                if PACKET_GAP:
+                    time.sleep(PACKET_GAP)
+            self._matrix_last = flat
 
     def _send_keys(self, data, now):
-        self._keys_pending = None
-        self.handshake()
-        for off in range(0, 168, 24):
-            self.send(C_SYNCLED, off, data[off:off + 24], wait=False)
-        self._keys_last, self._keys_t = data, now
+        with self.lock:
+            self._keys_pending = None
+            self._keys_t = now
+            self.handshake(wait=False)
+            for off in range(0, 168, 24):
+                self.send(C_SYNCLED, off, data[off:off + 24], wait=False)
+                if PACKET_GAP:
+                    time.sleep(PACKET_GAP)
+            self._keys_last = data
 
-    def push_matrix(self, flat):
+    def push_matrix(self, flat, force=False):
         """108 字节 RGB（6×6×3），5 包，每包 24 字节。
 
         限速时**不丢帧，而是留着补发**。动画丢一帧无所谓，但模式切换（比如切到
         专注要全黑）也是一次推送，丢了就永远留在上一张图上 —— 表现成「点了没反应」。
+        force=True 时绕过打字保护，给模式切换这类必须立刻生效的帧用。
         """
         flat = bytes(flat)[:108].ljust(108, NUL)
-        gap, _, hold, _, _, allow = self.budget()
-        if not allow:                       # 灭着：不推，但记住这是最新想显示的
-            self._matrix_pending = None
-            self._saved_mx = flat if any(flat) else None
-            self.dropped += 1
-            return False
-        now = time.time()
-        if flat == self._matrix_last and now - self._matrix_t < hold:
-            self._matrix_pending = None     # 内容一样，没什么可补的
-            self.dropped += 1
-            return False
-        if now - self._matrix_t < gap:
-            self._matrix_pending = flat     # 太快了：留着，间隔够了补发
-            self.dropped += 1
-            self._ensure_flusher()
-            return False
-        self._send_matrix(flat, now)
-        return True
+        with self.lock:
+            gap, _, hold, _, _, allow = self.budget()
+            if not allow:                       # 灭着：不推，但记住这是最新想显示的
+                self._matrix_pending = None
+                self._saved_mx = flat if any(flat) else None
+                self.dropped += 1
+                return False
+            if TYPING_GUARD and not force and recent_input():
+                self._matrix_pending = flat     # 正在打字：先攒着，键停 250ms 再补
+                self.dropped += 1
+                self._ensure_flusher()
+                return False
+            now = time.time()
+            if flat == self._matrix_last and now - self._matrix_t < hold:
+                self._matrix_pending = None     # 内容一样，没什么可补的
+                self.dropped += 1
+                return False
+            if now - self._matrix_t < gap:
+                self._matrix_pending = flat     # 太快了：留着，间隔够了补发
+                self.dropped += 1
+                self._ensure_flusher()
+                return False
+            self._send_matrix(flat, now)
+            return True
 
-    def push_keys(self, rgb565):
+    def push_keys(self, rgb565, force=False):
         """168 字节 RGB565 小端（84 颗灯），7 包。前提是背光模式已经是 254。
 
         键盘灯是耗电大头（84 颗 vs 点阵的 36 点），所以低电量时先撤的是它。
         同样是限速留着补发，不丢。"""
         data = bytes(rgb565)[:168].ljust(168, NUL)
-        _, gap, _, hold, allow, _ = self.budget()
-        if not allow:                       # 灭着：不推，但记住这是最新想显示的
-            self._keys_pending = None
-            self._saved_ky = data if any(data) else None
-            self.dropped += 1
-            return False
-        now = time.time()
-        if data == self._keys_last and now - self._keys_t < hold:
-            self._keys_pending = None
-            self.dropped += 1
-            return False
-        if now - self._keys_t < gap:
-            self._keys_pending = data
-            self.dropped += 1
-            self._ensure_flusher()
-            return False
-        self._send_keys(data, now)
-        return True
+        with self.lock:
+            _, gap, _, hold, allow, _ = self.budget()
+            if not allow:                       # 灭着：不推，但记住这是最新想显示的
+                self._keys_pending = None
+                self._saved_ky = data if any(data) else None
+                self.dropped += 1
+                return False
+            if TYPING_GUARD and not force and recent_input():
+                self._keys_pending = data
+                self.dropped += 1
+                self._ensure_flusher()
+                return False
+            now = time.time()
+            if data == self._keys_last and now - self._keys_t < hold:
+                self._keys_pending = None
+                self.dropped += 1
+                return False
+            if now - self._keys_t < gap:
+                self._keys_pending = data
+                self.dropped += 1
+                self._ensure_flusher()
+                return False
+            self._send_keys(data, now)
+            return True
 
     def forget_keys(self):
         """背光交回固件（模式不是 254）时调用：忘掉手里那帧灯。

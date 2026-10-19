@@ -499,6 +499,7 @@ def main():
 
     TRAY.create()
     hh = hud.install_hook()                       # 钩子必须和消息循环同一个线程
+    kh = hud.install_keyboard_hook()              # 只记打字时间戳，给动画让路
     hud.ENABLED = server.claude_on()
     TRAY.tip("%s —— %s" % (APP, "中键唤出胶囊" if hud.ENABLED else "键盘灯效工具"))
     print("   托盘就位；%s" % ("中键唤出胶囊，托盘左键开控制台" if hud.ENABLED
@@ -514,6 +515,8 @@ def main():
     finally:
         if hh:
             hud.user32.UnhookWindowsHookEx(hh)
+        if kh:
+            hud.user32.UnhookWindowsHookEx(kh)
         cleanup()
         print("=== YOGO 退出 ===")
 
