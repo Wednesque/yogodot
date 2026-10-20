@@ -219,6 +219,7 @@
     <nav>
       <a href="#patterns">图案</a>
       <a href="#features">功能</a>
+      <a href="#companion">伴侣</a>
       <a href="#install">安装</a>
       <a href="#faq">常见问题</a>
       <a class="dl" href="https://github.com/Wednesque/yogodot/releases/latest/download/YogoDot-windows.zip">下载</a>
@@ -287,7 +288,7 @@
     <div class="shot-cap">
       <div><b>左边：实时预览</b>上面是小屏，下面是 84 颗键盘灯，跟键盘上一模一样。</div>
       <div><b>右边：点一下就换</b>皮卡丘、吃豆人、精灵球、柴犬、初音、EVA…</div>
-      <div><b>顶上：切模式</b>主题、番茄钟、专注（全灭）、开机动画。</div>
+      <div><b>顶上：切模式</b>主题、番茄钟、专注（全灭）、Coding 伴侣、开机动画。</div>
     </div>
   </section>
 
@@ -346,7 +347,7 @@
   <section id="faq">
     <div class="sec-head"><h2>常见问题</h2></div>
     <div class="faq">
-      <details><summary>会不会弄坏键盘？</summary><p><b>不会。</b>不刷固件、不改按键。画面是实时发给键盘的，不存进键盘里；只有切换背光模式时会改一次键盘设置，跟官方驱动一样。想回到出厂状态，用官方 ATK HUB 的「恢复出厂」就行。</p></details>
+      <details><summary>会不会弄坏键盘？</summary><p><b>不会。</b>不刷固件、不改按键。点阵自定义图是实时发给键盘的，不存进键盘里；逐键配色会写进键盘的自定义灯效缓冲区（模式 253），切主题只写一次（VIA 缓冲区只在 USB 有线下开放，2.4G 下自动回退逐帧推流）。打开「固件动画」后，点阵和背光由键盘内置效果自己跑，主机不持续占用 2.4G。想回到出厂状态，用官方 ATK HUB 的「恢复出厂」就行。</p></details>
       <details><summary>蓝牙连接能用吗？</summary><p><b>不能。</b>键盘在蓝牙模式下不接受电脑控制灯光（键盘自己的限制）。要用 2.4G 接收器或数据线，打字、续航都不受影响。</p></details>
       <details><summary>要联网吗？</summary><p><b>不用。</b>默认完全离线。只有你手动打开给程序员用的「Claude 模式」，才会读取电脑上 Claude Code 的登录信息去查用量。</p></details>
       <details><summary>关掉软件会怎样？</summary><p>键盘上会留着最后一个画面，直到键盘休眠；之后回到键盘自带的显示。再打开软件会自动补上。</p></details>
@@ -372,6 +373,25 @@
   </div>
 </section>
 
+<section class="band" id="companion">
+  <div class="wrap dev">
+    <div>
+      <span class="tag">给写代码的人 · 新</span>
+      <h2 style="font-size:28px">Coding 伴侣</h2>
+      <p class="sub">Claude Code / Codex / TRAE / OpenCode 的任务状态直接上小屏：<b>形状认工具，颜色认状态</b>。键盘保持当前主题，只有小屏动。</p>
+      <ul>
+        <li>Claude 螃蟹 / Codex 云 / OpenCode 门 / TRAE 脸；白 = 空闲、蓝 = 执行中、琥珀 = 等你、紫 = 补充、绿 = 完成、红 = 出错。</li>
+        <li>授权和补充同级，最近的优先；完成 / 出错演 6 秒后退回白色空闲。</li>
+        <li>控制台里点「模拟四家工具」先看灯语；适配器只发状态元数据，不提取、不发送 prompt、回答或工具输入输出。</li>
+      </ul>
+      <p class="sub" style="margin-top:14px"><a href="https://github.com/Wednesque/yogodot/tree/main/remote/companion">安装适配器 →</a></p>
+    </div>
+    <div style="display:flex;justify-content:center">
+      <div class="dm big glow" id="demoCompanion" aria-hidden="true"></div>
+    </div>
+  </div>
+</section>
+
 <div class="wrap">
   <footer>
     <div class="links">
@@ -381,7 +401,7 @@
       <span>MIT 开源</span>
     </div>
     <div>个人项目，跟 ATK、Anthropic 都没有关系。像素图里的角色版权归各自所有者。</div>
-    <div class="en"><b>English:</b> YogoDot controls the 6×6 pixel screen and per-key RGB backlight of the ATK YOGO 75 PRO keyboard — 48 pixel-art images, 24 themes, pomodoro, auto-off on lock. Windows, no install, free and open source. Works over the 2.4G dongle or USB cable, not Bluetooth.</div>
+    <div class="en"><b>English:</b> YogoDot controls the 6×6 pixel screen and per-key RGB backlight of the ATK YOGO 75 PRO keyboard — 48 pixel-art images, 24 themes, pomodoro, auto-off on lock. Windows, no install, free and open source. Works over the 2.4G dongle or USB cable, not Bluetooth. The Coding companion mode shows Claude Code / Codex / TRAE / OpenCode state on the screen: shape = tool, color = state.</div>
   </footer>
 </div>
 
@@ -462,6 +482,18 @@
   const lock = matrix(document.getElementById('demoLock')); const heart = byName('爱心'); let lt = 0;
   function lockFrame(){ lock(lt<5 ? heart : blank()); lt = (lt+1)%8; }
   lockFrame();
+
+  // Coding 伴侣：蓝色 Claude 螃蟹，白眼睛
+  const comp = matrix(document.getElementById('demoCompanion'));
+  const CB = '#4A7FF3', CW = '#FFFFFF';
+  comp([
+    [null, CW, null, null, CW, null],
+    [null, CB, null, null, CB, null],
+    [CB, CB, CB, CB, CB, CB],
+    [CB, CB, CB, CB, CB, CB],
+    [null, CB, null, null, CB, null],
+    [CB, null, null, null, null, CB],
+  ]);
 
   // 会动的主题：火苗（三帧）
   const fire = matrix(document.getElementById('demoFire'));

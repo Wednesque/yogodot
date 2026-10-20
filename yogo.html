@@ -9,6 +9,7 @@
   :root{
     --ink:#0A0910;--panel:#14121C;--panel2:#1B1826;--line:#2E2840;--line2:#3B3552;
     --dim:#7C7694;--dim2:#5A5570;--text:#EFECF7;--accent:#FF6A1F;--ok:#3ED47A;--bad:#FF5A5A;--info:#4AA8FF;
+    --ask:#9B7CFF;
     --ui:"Chakra Petch","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
     --mono:"JetBrains Mono",Consolas,monospace;
   }
@@ -45,7 +46,8 @@
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#170A02}
   .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim2);margin:0 0 10px}
 
-  .modes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:22px 0 26px}
+  .modes{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:22px 0 26px}
+  @media(max-width:980px){.modes{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:760px){.modes{grid-template-columns:repeat(2,1fr)}}
   .mode{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 12px;
     display:flex;flex-direction:column;gap:4px;align-items:flex-start;transition:border-color .13s,background .13s}
@@ -90,6 +92,15 @@
   .agent{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 17px}
   .agent .st{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600}
   .agent .meta{font-family:var(--mono);font-size:11.5px;color:var(--dim2);margin-top:7px;word-break:break-all}
+  .compRow{display:flex;gap:12px;align-items:center}
+  .compRow.focus{border-color:var(--accent);background:#FF6A1F0D}
+  .compMain{min-width:0;flex:1}
+  .compMain .st{font-size:15px}
+  .cico{display:grid;grid-template-columns:repeat(6,4px);grid-template-rows:repeat(6,4px);gap:1px;flex:none}
+  .cico i{width:4px;height:4px;border-radius:1px;background:#100E18}
+  .cmini{display:inline-flex;align-items:center;gap:7px}
+  .cmini .cico{grid-template-columns:repeat(6,3px);grid-template-rows:repeat(6,3px)}
+  .cmini .cico i{width:3px;height:3px}
   .pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
     border:1px solid currentColor;border-radius:20px;padding:2px 9px}
   select,input[type=text]{background:var(--panel);border:1px solid var(--line);color:var(--text);
@@ -211,7 +222,7 @@
       <div class="row" style="margin-top:18px">
         <b style="color:var(--fg);font-size:12.5px">Claude 模式</b>
         <button class="btn" id="claudeOn">关</button>
-        <span style="color:var(--dim2);font-size:12px">开了才有顶部胶囊、Vibe 模式和额度显示</span>
+        <span style="color:var(--dim2);font-size:12px">开了才有顶部胶囊、Vibe 模式和额度显示；Coding 伴侣不受影响</span>
       </div>
       <div id="claudeOnly" hidden>
       <div class="row" style="margin-top:16px;font-size:12.5px;color:var(--dim)">
@@ -254,8 +265,10 @@
       </div><!-- /claudeOnly -->
 
       <div class="note" style="margin-top:14px">
-        画面是实时发给键盘的，<b>不存进键盘里</b> —— 所以软件要在后台开着；
-        关掉后键盘上留着最后一个画面，重新打开会自动补上。只有切换背光模式时会改一次键盘设置。<br>
+        点阵自定义图是实时发给键盘的，<b>不存进键盘里</b> —— 所以软件要在后台开着；
+        关掉后键盘上留着最后一个画面，重新打开会自动补上。逐键配色会写进键盘的
+        <b>自定义灯效缓冲区</b>（模式 253），切主题只写一次；打开<b>固件动画</b>后，
+        点阵和背光交给键盘内置效果，主机不再持续占用 2.4G。<br>
         休眠调长了状态灯才等得到你回来，代价是耗电 —— 15 分钟是我建议的平衡点。
       </div>
     </aside>
@@ -306,6 +319,10 @@
         <div class="row" style="margin:10px 0 4px">
           <button class="btn" id="dynBtn">静态</button>
           <span style="color:var(--dim2);font-size:12px" id="dynHint">点阵屏和键盘都定格，最省电</span>
+        </div>
+        <div class="row" style="margin:6px 0 4px">
+          <label class="row" style="gap:6px"><input type="checkbox" id="fwAnim">
+            <span style="color:var(--dim2);font-size:12.5px">固件动画（点阵用键盘内置效果，不持续占 2.4G）</span></label>
         </div>
         <div class="chips" id="themes" style="margin-top:14px"></div>
         <p class="label" style="margin-top:24px">单独点阵图 · 屏和灯一起换</p>
@@ -376,6 +393,41 @@
           coder 和 writer 的区分放在 HUD 胶囊里用文字说，比用灯猜准确。<br>
           远端 hook 经 SSH 反向隧道打回本机 9099。安装见 <b>remote/</b> 目录。<br>
           上报是 <b>async</b> 的，隧道断了也不会拖慢你的 Claude。
+        </div>
+      </section>
+
+      <!-- Coding 伴侣 -->
+      <section class="pane" data-pane="companion">
+        <p class="label">Coding 伴侣</p>
+        <p style="color:var(--dim);margin-top:0">
+          Claude Code / Codex / OpenCode / TRAE 的任务状态直接上点阵屏：
+          <b>形状认工具，颜色认状态</b>。键盘保持当前主题，<b>只有小屏动</b>。
+        </p>
+        <div class="row" style="margin:14px 0">
+          <button class="btn primary" id="cSim">模拟四家工具</button>
+          <button class="btn" id="cClear">清空会话</button>
+          <span id="cSimNote" style="color:var(--dim2);font-size:12px"></span>
+        </div>
+        <div class="row" style="margin:0 0 14px">
+          <span style="color:var(--dim2);font-size:12.5px">键盘灯效</span>
+          <select id="cKbFx"></select>
+          <span style="color:var(--dim2);font-size:12px">只换键盘，小屏不动</span>
+        </div>
+        <div class="row" style="margin:0 0 14px">
+          <span style="color:var(--dim2);font-size:12.5px">空闲展示</span>
+          <select id="cIdleLook"></select>
+          <span style="color:var(--dim2);font-size:12px">只在空闲时生效，忙时仍显示真实工具</span>
+        </div>
+        <div id="cTop" class="agent"></div>
+        <div id="cSessions" style="margin-top:10px"></div>
+        <p class="label" style="margin-top:22px">形状与状态</p>
+        <div class="chips" id="cLegend"></div>
+        <div class="note">
+          <b>只有点阵屏动</b> —— 伴侣模式只接管 6×6 点阵屏，键盘保持你当前的灯效；要换灯效用上面的「键盘灯效」。<br>
+          <b>空闲白色</b>；完成 / 出错演 6 秒后回到白色空闲；等你的「授权」和「补充」同级，最近的优先。<br>
+          事件统一走 <code>POST /events</code>。原生 hook 到标准事件的适配器放在 <code>remote/</code>。<br>
+          状态文案来自 <code>data.message</code>，显示在会话列表和胶囊里，不上 6×6 小屏。<br>
+          清空只是清显示；工具还在跑的话，下一条事件会把会话重新建出来。
         </div>
       </section>
     </main>
@@ -459,17 +511,17 @@ async function patchConfig(patch){
   const d=await kbCall("/kb/config",{bytes});
   return new Uint8Array(d.cfg);
 }
-async function pushMatrix(rgb){
-  try{ return await _pushMatrix(rgb); }
+async function pushMatrix(rgb, force){
+  try{ return await _pushMatrix(rgb, force); }
   catch(e){ lastErr=String(e && e.message || e).slice(0,120); throw e; }
 }
-async function _pushMatrix(rgb){
+async function _pushMatrix(rgb, force){
   const flat=[], k=DOT_BRIGHT/100;
   /* 点阵屏默认走原始意图色 —— 实测它的混色本来就准，套键盘那套校正反而搞坏。
      GAIN_DOT 勾上才同时应用饱和校正和通道增益。 */
   for(const row of rgb) for(const p1 of row){ const px=GAIN_DOT?gr(ledize(p1)):p1;
     flat.push(clamp(px[0]*k),clamp(px[1]*k),clamp(px[2]*k)); }
-  await kbCall("/kb/matrix",{rgb:flat});
+  await kbCall("/kb/matrix",{rgb:flat, force:!!force});
   frames++; pushOK++; lastErr=""; drawPreview(rgb);
 }
 
@@ -562,8 +614,9 @@ let KB_OFF=localStorage.getItem("yogo_kboff")==="1";   // 只亮点阵屏：键�
    为 null 时才走我们自己的逐键推流（模式 254）。 */
 let FW_FX=(()=>{ const v=localStorage.getItem("yogo_fwfx");
   return (v===null||v==="") ? null : +v; })();   // 只亮点阵屏：键盘灯全熄，屏照常
-async function pushKeys(arr){
+async function pushKeys(arr, force){
   if(FW_FX!=null||KB_OFF){ drawKeyboard(new Array(KB_N).fill([0,0,0])); return; }  // 交给固件 / 已关，一个字节都不发
+  if(streamOn===253){ drawKeyboard(arr||new Array(KB_N).fill([0,0,0])); return; }  // 配色在设备缓冲区里
   const p=[], k=KB_BRIGHT/100;
   for(let i=0;i<KB_N;i++){
     const c=RAW ? (arr[i]||[0,0,0]) : gr(ledize(arr[i]||[0,0,0]));
@@ -571,7 +624,7 @@ async function pushKeys(arr){
     const v=((R>>3&31)<<11)|((G>>2&63)<<5)|(B>>3&31);
     p.push(v&255, (v>>8)&255);
   }
-  await kbCall("/kb/keys",{rgb565:p});
+  await kbCall("/kb/keys",{rgb565:p, force:!!force});
   drawKeyboard(arr);
 }
 const stopKeys=()=>kbCall("/kb/stopkeys").catch(()=>{});
@@ -595,10 +648,11 @@ async function attach(info){
   try{ await ensureSleep(); }catch(e){}
   lightNow=null;                                  // 重连后强制重发一次背光
   streamOn=null;
+  dotMode=null;                                   // 重连后点阵也要重新进自定义模式
   applyMode(MODE, true);
 }
 function detach(why){
-  dev=null; streamOn=null;
+  dev=null; streamOn=null; dotMode=null;
   $("dot").classList.remove("on"); $("stat").textContent=why||"未连接"; $("conn").textContent="重新连接";
 }
 $("conn").addEventListener("click", async()=>{
@@ -1422,6 +1476,23 @@ const THEMES={
     kbAnim: kbCaps([120,0,18],[26,0,6],[255,45,55],{breathe:1.9}) }
 };
 
+/* ── 固件内置效果映射 ────────────────────────────────────────────
+   开「固件动画」后：点阵用键盘固件的 12 个内置效果（0-12，6=自定义），
+   背光用内置灯效（0-20），两者都由固件自己跑，主机不再持续推帧。
+   没有映射的主题 = 单帧自定义图 + 写 VIA 自定义灯效缓冲区。 */
+const FW_DOT = {
+  starry:0, jelly:1, aurora:3, weather:4, lava:8, emoji:10, matrix:11,
+  sunset:3, heartbeat:9,
+};
+/* [blMode, colorful]；colorful=0 时用主题的 light 颜色 */
+const FW_KB = {
+  pikachu:[3,0], claude:[3,0], pacman:[5,1], doraemon:[3,0], pokeball:[18,1],
+  lava:[3,0], aurora:[20,1], sunset:[15,1], matrix:[13,1], emoji:[5,1],
+  weather:[9,1], shiba:[3,0], panda:[3,0], penguin:[3,0], jelly:[3,0],
+  starry:[1,1], miku:[3,0], veggie:[3,0], fruit:[3,0], animal:[3,0],
+  eva01:[3,0], eva00:[3,0], minecraft:[3,0], heartbeat:[3,0],
+};
+
 /* 表情素材：X = 主色，o = 半亮。键盘配色跟着当前表情的情绪走 */
 const MOOD_T=2.6;
 const MOODS=[
@@ -1656,11 +1727,18 @@ const ANIM_NAMES=Object.keys(ANIMS);
 
 /* ═══════════════ 播放引擎 ═══════════════ */
 let stopFn=null, liveFn=null;
-/* vibe 当前画面的签名 + 键盘灯当前用的主题。
+/* vibe / Coding 伴侣当前画面的签名 + 键盘灯当前用的主题。
    用来判断「该画的东西变了没有」，没变就不重启循环、不重推灯。 */
-let vibeSig=null, vibeKb=null;
+let vibeSig=null, vibeKb=null, compSig=null, compBurst=null;
+let compStop=null, compHoldTimer=null;
+const COMP_HOLD_MS=6000;
 const FPS=()=>+$("fpsSel").value||15;
-function stopAnim(){ if(stopFn){stopFn();stopFn=null;} liveFn=null; vibeSig=null; }
+function stopAnim(){
+  if(compStop){compStop();compStop=null;}
+  if(compHoldTimer){clearTimeout(compHoldTimer);compHoldTimer=null;}
+  if(stopFn){stopFn();stopFn=null;}
+  liveFn=null; vibeSig=null; compSig=null;
+}
 function runAnim(fn,fps,ms){
   stopAnim(); liveFn=fn;
   let stopped=false,busy=false;const t0=performance.now();
@@ -1671,10 +1749,10 @@ function runAnim(fn,fps,ms){
   let h=null; if(ms) h=setTimeout(()=>{ stopped=true; stopFn=null; liveFn=null; applyMode(MODE,true); }, ms);
   stopFn=()=>{ stopped=true; if(h)clearTimeout(h); };
 }
-async function showStatic(rgb){ stopAnim(); try{ await pushMatrix(rgb); }catch(e){} }
+async function showStatic(rgb){ stopAnim(); try{ await pushMatrix(rgb, true); }catch(e){} }
 
 /* 背光走推流：进一次流式模式（一次 flash 写），之后全部是 RAM，随便刷 */
-let streamOn=null, lightNow=null;
+let streamOn=null, dotMode=null, lightNow=null;
 /* 键盘没应答时把话说明白 —— 之前是静悄悄什么都不做，看着就像软件坏了 */
 function markAsleep(){
   awake=false;
@@ -1720,13 +1798,27 @@ async function enterStreamMode(){
      以前只在原厂灯效下才写 0，我们自己的推流模式下「熄灭」只是推一帧全黑继续流着 ——
      灯是黑的，驱动和推流态都还醒着，电照样掉。 */
   const want = KB_OFF ? 0 : FW_FX==null ? BL_STREAM : FW_FX;
-  if(streamOn===want) return true;
+  if(streamOn===want && dotMode===DS_CUSTOM) return true;
   try{ await patchConfig({ blMode:want, blBright:90,
-         blColorful: FW_FX==null?0:1,               // 原厂灯效放开彩色，用它自带的配色
-         dsMode:DS_CUSTOM, dsBright:90 });
-       streamOn=want; return true; }
+         blColorful: FW_FX==null?0:1 });
+       /* 官方进入自定义点阵前先 end_sync_dot，再写 mode=6；照它做 */
+       await kbCall("/kb/dotmode",{mode:DS_CUSTOM, brightness:90, sync:true});
+       streamOn=want; dotMode=DS_CUSTOM; return true; }
   catch(e){ lastErr="进流模式失败: "+String(e&&e.message||e).slice(0,90);
             markAsleep(); return false; }
+}
+/** 只接管 6×6 小屏，不碰键盘背光。伴侣模式用它。 */
+async function enterDotMode(){
+  if(dotMode===DS_CUSTOM) return true;
+  try{
+    await kbCall("/kb/dotmode",{mode:DS_CUSTOM, brightness:90, sync:true});
+    dotMode=DS_CUSTOM;
+    return true;
+  }catch(e){
+    lastErr="进自定义点阵失败: "+String(e&&e.message||e).slice(0,90);
+    markAsleep();
+    return false;
+  }
 }
 /** 整块铺一个颜色（vibe 状态、番茄钟底色用），零 flash 写入 */
 async function setLight(color, bright){
@@ -1734,7 +1826,7 @@ async function setLight(color, bright){
   if(k===lightNow) return; lightNow=k;
   await enterStreamMode();
   const c = (!color||!bright) ? [0,0,0] : color.map(v=>clamp(v*bright/90));
-  try{ await pushKeys(new Array(KB_N).fill(c)); }catch(e){ lightNow=null; }
+  try{ await pushKeys(new Array(KB_N).fill(c), true); }catch(e){ lightNow=null; }
 }
 async function setSleepMinutes(min){
   const s=Math.max(60, Math.min(0xFFFFFF, min*60));
@@ -1749,12 +1841,14 @@ const MODES=[
   {id:"focus",    name:"专注",       desc:"全灭，什么都不动"},
   {id:"theme",    name:"主题",       desc:"逐键配色 + 点阵图案"},
   {id:"pomodoro", name:"番茄钟",     desc:"环 + 进度条，到点跳番茄"},
-  {id:"vibe",     name:"Vibe Coding",desc:"点阵屏＝电子宠物，跟着会话状态"}
+  {id:"vibe",     name:"Vibe Coding",desc:"点阵屏＝电子宠物，跟着会话状态"},
+  {id:"companion",name:"Coding 伴侣", desc:"形状认工具，颜色认状态；只有小屏动"}
 ];
 let MODE=localStorage.getItem("yogo_mode")||"theme";
 let THEME=localStorage.getItem("yogo_theme")||"pikachu";
 if(!THEMES[THEME]) THEME="pikachu";                       // 旧存档里的主题名可能已不存在
 let THEME_DYN=localStorage.getItem("yogo_dyn")==="1";
+let FW_ANIM=localStorage.getItem("yogo_fwanim")==="1";
 const THEME_KEYS=Object.keys(THEMES);
 let LAST_RESIDENT=localStorage.getItem("yogo_resident")||"theme";   // 专注/启动 结束后回到这里
 
@@ -1783,7 +1877,7 @@ MODES.forEach(m=>{
 });
 function setMode(id){
   MODE=id; localStorage.setItem("yogo_mode",id);
-  if(id==="theme"||id==="pomodoro"||id==="vibe"){ LAST_RESIDENT=id; localStorage.setItem("yogo_resident",id); }
+  if(id==="theme"||id==="pomodoro"||id==="vibe"||id==="companion"){ LAST_RESIDENT=id; localStorage.setItem("yogo_resident",id); }
   document.querySelectorAll(".mode").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.id===id)));
   document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.dataset.pane===id));
   try{ renderDotOwner(); }catch(e){}
@@ -1791,20 +1885,70 @@ function setMode(id){
 }
 async function applyMode(id, isReattach){
   if(!dev) return;
+  stopAnim();                       // 模式切换先停旧循环
   /* 离开 vibe：别的模式会把键盘灯覆盖掉，所以忘记「灯已经是这个主题了」，
      下次回 vibe 必须重推一次。 */
   if(id!=="vibe") vibeKb=null;
   if(id==="startup"){ playStartup(); return; }
   if(id==="focus"){ stopAnim(); lightNow=null;
     await enterStreamMode();
-    try{ await pushKeys(new Array(KB_N).fill([0,0,0])); await pushMatrix(blank()); }catch(e){}
+    try{ await pushKeys(new Array(KB_N).fill([0,0,0]), true); await pushMatrix(blank(), true); }catch(e){}
     $("focusDot").classList.add("on"); $("focusTxt").textContent="已启用"; return; }
   $("focusDot").classList.remove("on"); $("focusTxt").textContent="未启用";
   if(id==="theme"){ applyTheme(THEME); return; }
   if(id==="pomodoro"){ lightNow=null; if(await enterStreamMode()) pomPaint(); return; }
   if(id==="vibe"){ if(await enterStreamMode()) vibePaint(); return; }
+  if(id==="companion"){ if(await enterDotMode()) companionPaint(); return; }
 }
-/** 主题运行器：点阵屏 + 键盘一起驱动。静态 = 低速定格刷新，动态 = 12fps 一起动 */
+/** 主题运行器：点阵屏 + 键盘一起驱动。静态 = 推一次，动态 = 低帧率一起动 */
+function kbGrid(rgb84){
+  const g=Array.from({length:6},()=>Array.from({length:16},()=>[0,0,0]));
+  for(let r=0;r<6;r++) for(let c=0;c<16;c++){
+    const idx=KB_MAP[r][c];
+    if(idx!==255 && rgb84[idx]) g[r][c]=rgb84[idx].map(v=>clamp(v));
+  }
+  return g;
+}
+async function storeKeys(rgb84){
+  try{
+    const d=await kbCall("/kb/lightbuf",{colors:kbGrid(rgb84)});
+    if(d && d.ok){ streamOn=253; return true; }
+    lastErr=(d&&d.why)||"写入自定义灯效缓冲区失败";
+  }catch(e){ lastErr=String(e&&e.message||e).slice(0,120); }
+  return false;
+}
+async function pushThemeKeys(t){
+  const arr=t.kb(0);
+  if(KB_OFF || FW_FX!=null){ drawKeyboard(arr); return; }
+  if(await storeKeys(arr)){ drawKeyboard(arr); return; }
+  await pushKeys(arr, true);                     // VIA 不可用：退回 cmd 46 推流
+}
+/** 固件动画：点阵/背光交给键盘自己跑，主机零持续推流 */
+async function applyFirmwareTheme(t){
+  stopAnim(); lightNow=null;
+  if(ART_PICK && STATICS[ART_PICK.name]){ artPush(STATICS[ART_PICK.name], ART_PICK.idx|0); return; }
+  const dot=FW_DOT[THEME];
+  if(dot!=null){
+    /* 官方 setDotLight 固定 colorful=0，颜色走 LedTFTColorR/G/B */
+    await kbCall("/kb/dotmode",{mode:dot, brightness:90, speed:3, colorful:0,
+                                color:t.light, sync:true});
+    dotMode=dot;
+  }else{
+    await kbCall("/kb/dotmode",{mode:DS_CUSTOM, brightness:90, sync:true});
+    dotMode=DS_CUSTOM;
+    await pushMatrix(rows2rgb(t.dot), true);
+  }
+  if(KB_OFF) return;
+  const fk=FW_KB[THEME];
+  if(fk){
+    const bytes={ [CFG.blMode]:fk[0], [CFG.blBright]:90, [CFG.blColorful]:fk[1] };
+    if(!fk[1]){ bytes[CFG.blR]=t.light[0]; bytes[CFG.blG]=t.light[1]; bytes[CFG.blB]=t.light[2]; }
+    await kbCall("/kb/config",{bytes});
+    streamOn=fk[0];
+  }else{
+    await pushThemeKeys(t);
+  }
+}
 function runTheme(t, dyn){
   stopAnim(); lightNow=null;
   if(ART_PICK && STATICS[ART_PICK.name]){       // 画廊里挑过图：主题的点阵图让位
@@ -1812,10 +1956,8 @@ function runTheme(t, dyn){
     return;
   }
   if(!dyn){
-    /* 静态主题：推一帧就完事，之后零流量。
-       官方 HUB 也是这么干的 —— 图写进设备就不用再管，反复推只是白耗电。
-       （以前这里按 1.2fps 一直刷一张静止的图。） */
-    (async()=>{ try{ await pushKeys(t.kb(0)); await pushMatrix(rows2rgb(t.dot)); }catch(e){} })();
+    /* 静态主题：推一帧就完事，之后零流量。 */
+    (async()=>{ try{ await pushThemeKeys(t); await pushMatrix(rows2rgb(t.dot), true); }catch(e){} })();
     liveFn=null;
     return;
   }
@@ -1834,11 +1976,15 @@ function runTheme(t, dyn){
   liveFn=null;
 }
 async function applyTheme(k){
+  stopAnim();                       // 先停旧循环，别在切配置时继续画旧主题
   THEME=k; localStorage.setItem("yogo_theme",k);
   syncPickUI();
   if(!await enterStreamMode()){ console.warn("applyTheme 中止：", lastErr); return; }
   markAwake();
-  runTheme(THEMES[k], THEME_DYN);
+  try{
+    if(FW_ANIM) await applyFirmwareTheme(THEMES[k]);
+    else runTheme(THEMES[k], THEME_DYN);
+  }catch(e){ lastErr=String(e&&e.message||e).slice(0,120); }
 }
 
 /* 启动模式：开机检测日期，跨天就换下一个主题 */
@@ -1855,10 +2001,12 @@ function rotateThemeIfNewDay(){
   return true;
 }
 async function playStartup(){
+  stopAnim();
   const t=THEMES[THEME];
   $("todayAnim").textContent=t.name;
   if(!await enterStreamMode()) return;
-  runTheme(t, true);                              // 入场一律跑动态，够热闹
+  if(FW_ANIM) await applyFirmwareTheme(t);          // 固件动画：入场也不持续推帧
+  else runTheme(t, true);                           // 入场一律跑动态，够热闹
   setTimeout(()=>{ if(MODE==="startup") setMode(LAST_RESIDENT); }, 12000);
 }
 $("playStartup").addEventListener("click", playStartup);
@@ -1946,7 +2094,7 @@ async function artPush(rows, idx){
   const fn=ART_LAYOUTS[idx%ART_LAYOUTS.length];
   stopAnim();
   if(!await enterStreamMode()) return;
-  try{ await pushKeys(fn(a,b)(0)); await pushMatrix(rows2rgb(rows)); }catch(e){}
+  try{ await pushKeys(fn(a,b)(0), true); await pushMatrix(rows2rgb(rows), true); }catch(e){}
 }
 async function showArt(name, idx){
   const rows=STATICS[name]; if(!rows) return;
@@ -1957,7 +2105,7 @@ async function showArt(name, idx){
   /* vibe 和番茄钟模式会按自己的节奏一直刷点阵屏（电子宠物、进度环），
      你点的图会在下一帧被盖掉 —— 表现就是"点了没反应，一直是那只宠物"。
      所以先退回主题模式，再把图放上去。 */
-  if(MODE==="vibe"||MODE==="pomodoro"){
+  if(MODE==="vibe"||MODE==="pomodoro"||MODE==="companion"){
     const was=DOT_OWNER[MODE]||MODE;
     await setMode("theme");           // setMode -> applyTheme -> runTheme 会认 ART_PICK
     const el=$("dotOwner");
@@ -1971,7 +2119,7 @@ async function showArt(name, idx){
    以前在 vibe 模式下点画廊，图会被下一帧盖掉，看着就像"点了没反应"。
    现在把归属摆到明面上：不是主题模式时画廊压暗，点了会明确告诉你切过去了。 */
 const DOT_OWNER = { theme:"主题图案", vibe:"电子宠物", pomodoro:"番茄钟进度环",
-                    focus:"全灭", startup:"开机动画" };
+                    companion:"Coding 伴侣", focus:"全灭", startup:"开机动画" };
 function renderDotOwner(){
   const el=$("dotOwner"); if(!el) return;
   const mine = MODE==="theme";
@@ -2000,26 +2148,35 @@ Object.keys(GALLERY).forEach((cat,ci)=>{
 });
 renderDotOwner();
 
-/* 键盘灯效来源：我们的逐键配色 vs 原厂内置灯效 */
+/* 键盘灯效来源：我们的逐键配色 vs 原厂内置灯效。
+   主题页和 Coding 伴侣页各放一个选择器，共用同一份设置。 */
 (function(){
-  const sel=$("fwSel");
-  const o0=document.createElement("option"); o0.value=""; o0.textContent="主题配色（我们的）";
-  sel.appendChild(o0);
-  BL_MODES.forEach(([v,name,hasColor])=>{
-    if(v===0) return;                              // 「全灭」用旁边的熄灭按钮，不放这
-    const o=document.createElement("option"); o.value=String(v);
-    o.textContent="原厂 · "+name; sel.appendChild(o);
-  });
-  sel.value = FW_FX==null ? "" : String(FW_FX);
+  const sel=$("fwSel"), csel=$("cKbFx");
+  function fill(s){
+    if(!s) return;
+    const o0=document.createElement("option"); o0.value=""; o0.textContent="主题配色（我们的）";
+    s.appendChild(o0);
+    BL_MODES.forEach(([v,name])=>{
+      if(v===0) return;                              // 「全灭」用旁边的熄灭按钮，不放这
+      const o=document.createElement("option"); o.value=String(v);
+      o.textContent="原厂 · "+name; s.appendChild(o);
+    });
+  }
+  fill(sel); fill(csel);
   function hint(){ $("fwHint").textContent = FW_FX==null
     ? "" : "固件自己跑，用它自带的配色；点阵屏仍然是我们的"; }
+  function sync(value){ sel.value=value; if(csel) csel.value=value; }
+  sync(FW_FX==null ? "" : String(FW_FX));
   hint();
-  sel.addEventListener("change", async()=>{
-    FW_FX = sel.value==="" ? null : +sel.value;
-    localStorage.setItem("yogo_fwfx", sel.value);
+  function apply(value){
+    FW_FX = value==="" ? null : +value;
+    localStorage.setItem("yogo_fwfx", value);
+    sync(value);
     hint(); streamOn=null; lightNow=null;          // 强制重写一次配置
     repaintNow();
-  });
+  }
+  sel.addEventListener("change", ()=>apply(sel.value));
+  if(csel) csel.addEventListener("change", ()=>apply(csel.value));
 })();
 
 /* 静态 / 动态 */
@@ -2035,10 +2192,21 @@ $("dynBtn").addEventListener("click", ()=>{
   syncDynBtn(); if(MODE==="theme") applyTheme(THEME); });
 syncDynBtn();
 
+/* 固件动画开关：点阵/背光交给键盘内置效果，主机不再持续推帧 */
+if($("fwAnim")){
+  $("fwAnim").checked=FW_ANIM;
+  $("fwAnim").addEventListener("change", ()=>{
+    FW_ANIM=$("fwAnim").checked;
+    localStorage.setItem("yogo_fwanim", FW_ANIM?"1":"0");
+    if(MODE==="theme") applyTheme(THEME);
+  });
+}
+
 /* 亮度滑杆 —— 软件缩放，拖动即时生效 */
 function repaintNow(){
   if(MODE==="theme") applyTheme(THEME);
   else if(MODE==="vibe") vibePaint();
+  else if(MODE==="companion"){ compSig=null; applyKeyboardOnly().then(companionPaint); }
   else if(MODE==="focus") applyMode("focus");
   else if(MODE==="pomodoro") applyMode("pomodoro");
 }
@@ -2053,7 +2221,7 @@ function repaintNow(){
 /* 白平衡校准 */
 let calTest=false;
 const CAL_YELLOW=[255,255,0];                       // R=G 的纯黄，校准基准
-const paintCal=()=>pushKeys(new Array(KB_N).fill(CAL_YELLOW)).catch(()=>{});
+const paintCal=()=>pushKeys(new Array(KB_N).fill(CAL_YELLOW), true).catch(()=>{});
 const GID=[["gR","gRv",0],["gG","gGv",1],["gB","gBv",2]];
 function syncGain(){ GID.forEach(([id,lab,i])=>{
   const p=Math.round(GAIN[i]*100); $(id).value=String(p); $(lab).textContent=p+"%"; }); }
@@ -2087,7 +2255,7 @@ async function sweepBlocks(ch, lo, hi){
   const gains=[0,1,2,3].map(i=>lo+(hi-lo)*(i+0.5)/4);
   RAW=true;
   await pushKeys(eachKey((r,c)=>{
-    const col=base.slice(); col[ch]=col[ch]*gains[Math.min(3,Math.floor(c/4))]; return col; }));
+    const col=base.slice(); col[ch]=col[ch]*gains[Math.min(3,Math.floor(c/4))]; return col; }), true);
   RAW=false;
 
   const box=$("calPick"); box.hidden=false; box.innerHTML="";
@@ -2263,8 +2431,8 @@ function pomPaint(){
     return;
   }
   if(pomState==="idle"){ stopAnim();
-    pushKeys(THEMES[THEME].kb(0)).catch(()=>{});
-    pushMatrix(rows2rgb(STATICS.tomato)).catch(()=>{});
+    pushKeys(THEMES[THEME].kb(0), true).catch(()=>{});
+    pushMatrix(rows2rgb(STATICS.tomato), true).catch(()=>{});
     return; }
   stopAnim();                                 // 专注/休息：2fps 足够，安静省电
   let stopped=false,busy=false; const t0=performance.now();
@@ -2344,11 +2512,23 @@ pomRender();
    两个 tmux 窗口就把 16 列劈成左右两半，一眼看出是 coder 还是 writer。
    平时（idle）键盘保持你当前主题的颜色，不抢注意力；
    只有真正需要你的时候才接管，而且是整区脉动，不可能错过。            */
-const ST_TXT={ idle:"空闲", busy:"执行中", wait:"等你", done:"完成", error:"出错" };
-const ST_CSS={ idle:"var(--dim2)", busy:"var(--info)", wait:"var(--accent)", done:"var(--ok)", error:"var(--bad)" };
+const ST_TXT={ idle:"空闲", busy:"执行中", wait:"等你", ask:"补充", done:"完成", error:"出错" };
+const ST_CSS={ idle:"var(--dim2)", busy:"var(--info)", wait:"var(--accent)",
+               ask:"var(--ask)", done:"var(--ok)", error:"var(--bad)" };
 const ST_A  ={ busy:[0,90,255],  wait:[255,90,0],  done:[20,220,70], error:[255,20,20] };
 const ST_B  ={ busy:[0,220,255], wait:[255,225,0], done:[150,255,60], error:[255,150,0] };
-const ST_PRI={ wait:4, error:3, busy:2, done:1, idle:0 };
+const ST_PRI={ wait:5, ask:5, error:4, busy:3, done:2, idle:1 };
+function pulseAt(p,a,b){
+  p=((p%1)+1)%1;
+  if(p<a) return Math.sin(Math.PI*p/a);
+  if(p<a+b) return Math.sin(Math.PI*(p-a)/b);
+  return 0;
+}
+function triplePulse(p){
+  p=((p%1)+1)%1;
+  const seg=0.14;
+  return p<seg*3 ? Math.sin(Math.PI*(p%seg)/seg) : 0;
+}
 let SESSIONS=[], lastSeen={}, doneTimer=null;
 
 const vibeList=()=>SESSIONS.length?SESSIONS.slice(0,3):[{key:"claude",state:"idle"}];
@@ -2357,7 +2537,7 @@ const vibeList=()=>SESSIONS.length?SESSIONS.slice(0,3):[{key:"claude",state:"idl
    状态只由点阵屏（电子宠物）表达，coder / writer 的区分放在 HUD 胶囊里。
    理由：键盘是你手底下的东西，让它跟着远端状态变色反而是干扰；
    而且"哪半边亮"这种信息，胶囊上用文字说清楚比用灯猜准确得多。 */
-const PET_COL={ idle:null, busy:[0,140,255], wait:[255,110,0],
+const PET_COL={ idle:null, busy:[0,140,255], wait:[255,110,0], ask:[124,92,255],
                 done:[30,225,80], error:[255,35,30] };
 let DOT_PET="blob";                      /* 点阵屏上的宠物形象 */
 
@@ -2397,6 +2577,13 @@ function sharkFrame(t, st){
     const up=Math.sin(t*4)>0.2?1:0;
     draw(1, 0, B, [255,255,255]);
     put(0, 2, up?[255,255,255]:DIM);                  // 背鳍冒出水面
+    return g;
+  }
+  if(st==="ask"){
+    const e=triplePulse(t*1.6);
+    draw(1, 0, B, [255,255,255]);
+    put(0, 2, e>0.25?[255,255,255]:DIM);
+    put(0, 4, e>0.55?[255,255,255]:DIM);
     return g;
   }
   /* done：跃出水面，头顶冒星 */
@@ -2446,6 +2633,17 @@ function blobFrame(t, st){
     put(3-jump,2,[0,0,0]); put(3-jump,3,[0,0,0]);
     return g;
   }
+  if(st==="ask"){
+    const e=triplePulse(t*1.6);
+    const jump=e>0.55?1:0;
+    const k=0.35+0.65*e;
+    const C=[clamp(B[0]*k),clamp(B[1]*k),clamp(B[2]*k)];
+    ["o....o",".oooo.","oooooo","oooooo",".oooo.",".o..o."].forEach((row,r)=>
+      [...row].forEach((ch,x)=>{ if(ch==="o") put(r-jump,x,C); }));
+    put(2-jump,1,[0,0,0]); put(2-jump,4,[0,0,0]);
+    if(e>0.2) put(0,2,[255,255,255]);
+    return g;
+  }
   if(st==="done"){
     const ph=(t*2.2)%1, jump=ph<0.5?1:0;
     ["o....o",".oooo.","oooooo","oooooo",".oooo.",".o..o."].forEach((row,r)=>
@@ -2479,11 +2677,11 @@ function vibePaint(){
   stopAnim();                         // 注意：这里会把 vibeSig 清掉
   vibeSig = sig;
   /* 键盘灯只跟主题走，跟会话状态无关。主题没换就别重推。 */
-  if(vibeKb!==THEME){ vibeKb=THEME; pushKeys(THEMES[THEME].kb(0)).catch(()=>{}); }
+  if(vibeKb!==THEME){ vibeKb=THEME; pushKeys(THEMES[THEME].kb(0), true).catch(()=>{}); }
   if(st==="idle"){
     /* 没事的时候宠物睡觉：一帧定格，不开循环。以前 2fps 呼吸 + 飘 Z，
        看着可爱，但意味着大多数时间流量永远不断。省电优先。 */
-    pushMatrix(petFrame(0, st)).catch(()=>{});
+    pushMatrix(petFrame(0, st), true).catch(()=>{});
     return;
   }
   const fps = st==="busy" ? 5 : 12;
@@ -2495,6 +2693,559 @@ function vibePaint(){
     if(!stopped) setTimeout(tick, 1000/fps); };
   tick(); stopFn=()=>{stopped=true;};
 }
+
+/* ════════════ Coding 伴侣 ════════════
+   服务端 /events 把各家 hook 归一化成 7 个标准事件；这里只做两件事：
+   形状认工具、颜色认状态。小屏是唯一会动的东西 —— 进入模式时把当前主题的
+   键盘灯推一次，之后只推 6×6。空闲白色；wait/ask 同级取最近；done/error
+   演 6 秒后退回白色空闲。 */
+/* 点阵灯珠的蓝通道效率远高于绿/红（约 14:4:1）：低饱和色会被蓝压成青或紫。
+   所以状态色按「目标色相 + 非蓝状态尽量不给蓝」来配：
+   橙/绿/红把 B 压到 0，紫用高红 + 一点点蓝，才不会看成进行中的蓝。 */
+const COMP_COL={ busy:[0,90,255], wait:[255,60,0], ask:[230,0,35],
+                 done:[0,220,0], error:[255,0,0] };
+const COMP_LABEL={ "claude-code":"Claude Code", codex:"Codex", opencode:"OpenCode",
+                   trae:"TRAE", mcp:"MCP", companion:"Coding 伴侣" };
+const COMP_TOOLS=[["claude-code","Claude Code"],["codex","Codex"],
+                  ["opencode","OpenCode"],["trae","TRAE"]];
+const COMP_STATES=[["idle","空闲 · 白"],["busy","执行中 · 蓝"],["wait","等你 · 琥珀"],
+                   ["ask","补充 · 紫"],["done","完成 · 绿"],["error","出错 · 红"]];
+/* 空闲展示：只在状态为 idle 时生效；忙/等/完成/出错仍然显示真实工具。
+   原来 OpenCode 门内四套动作自动轮换，实际不容易看出来，改成手动选。 */
+const IDLE_LOOKS=[
+  ["auto","跟随会话"],
+  ["claude-code","Claude Code · 眨眼"],
+  ["codex","Codex · 光标闪"],
+  ["opencode:scan","OpenCode · 扫描线"],
+  ["opencode:door","OpenCode · 门开合"],
+  ["opencode:stream","OpenCode · 数据流"],
+  ["opencode:beat","OpenCode · 心跳"],
+  ["trae","TRAE · 眨眼"]
+];
+let IDLE_LOOK=localStorage.getItem("yogo_idle_look")||"auto";
+(function(){
+  const sel=$("cIdleLook"); if(!sel) return;
+  if(!IDLE_LOOKS.some(([v])=>v===IDLE_LOOK)) IDLE_LOOK="auto";
+  for(const [v,t] of IDLE_LOOKS){
+    const o=document.createElement("option"); o.value=v; o.textContent=t; sel.appendChild(o);
+  }
+  sel.value=IDLE_LOOK;
+  sel.addEventListener("change",()=>{
+    IDLE_LOOK=sel.value;
+    localStorage.setItem("yogo_idle_look",IDLE_LOOK);
+    compSig=null; companionPaint(); renderCompanionList();
+  });
+})();
+const COMP_ROWS={
+  claude:[".e..e.",".b..b.","bbbbbb","bbbbbb",".b..b.","b....b"],
+  codex:[".bbbb.","bbbbbb","bbpbbb","bbbpbb","bbpbpb",".bbbb."],
+  generic:["bbbbbb","b....b","bp...b","b.p..b","bp.p.b","bbbbbb"]
+};
+function compCells(rows, chars){
+  const out=[];
+  rows.forEach((row,r)=>[...row].forEach((ch,c)=>{
+    if(chars.indexOf(ch)>=0) out.push([r,c]);
+  }));
+  return out;
+}
+const COMP_FRAME=(()=>{const p=[];for(let r=0;r<6;r++)for(let c=0;c<6;c++)
+  if(r===0||r===5||c===0||c===5)p.push([r,c]);return p;})();
+const COMP_INNER=(()=>{const p=[];for(let r=1;r<5;r++)for(let c=1;c<5;c++)
+  p.push([r,c]);return p;})();
+const COMP_TRAE_HOLES=[[1,1],[2,1],[1,4],[2,4],[5,0]];
+function compPut(g,r,c,color,br){
+  if(r<0||r>5||c<0||c>5) return;
+  g[r][c]=[clamp(color[0]*br),clamp(color[1]*br),clamp(color[2]*br)];
+}
+function compMix(a,b,k){
+  return [a[0]+(b[0]-a[0])*k, a[1]+(b[1]-a[1])*k, a[2]+(b[2]-a[2])*k];
+}
+function compBase(state,t){
+  if(state==="idle") return .55;
+  if(state==="busy") return .58+.16*Math.sin(t*2.0);
+  if(state==="wait") return .22+.78*pulseAt(t*1.5,.18,.16);
+  if(state==="ask")  return .20+.80*triplePulse(t*1.6);
+  if(state==="done") return .55+.45*Math.exp(-t*3.5)+.10*Math.sin(t*3);
+  if(state==="error") return .10+.90*(Math.sin(t*2*Math.PI*4)>0?1:0);
+  return .5;
+}
+function compWave(r,c,t){
+  return Math.pow(Math.max(0,Math.cos((r*.95+c*.65-t*2.2)*Math.PI)),4);
+}
+function compRipple(r,c,t){
+  const d=Math.hypot((r-2.5)/2.6,(c-2.5)/2.6);
+  return Math.pow(Math.max(0,Math.cos((d*1.5-t*2.6)*Math.PI)),8)*Math.exp(-t*.8);
+}
+/* 空闲：白色不变，每家工具一个很小的动作，4 帧/秒。
+   低亮度白色不会抢状态色；离开 3 分钟仍然由 kbd 层整体熄屏。 */
+function idleFrame(agent,t,look){
+  const g=blank();
+  const W=[255,255,255];
+  const br=.46+.09*Math.sin(t*1.15);            // 慢呼吸
+  const put=(r,c,b)=>compPut(g,r,c,W,b);
+  const blink=(period,width,off)=>((((t+(off||0))%period)+period)%period)<width;
+
+  if(agent==="claude-code"){
+    const body=compCells(COMP_ROWS.claude,"b");
+    const eyes=compCells(COMP_ROWS.claude,"e");
+    const shut=blink(6.2,.30,3.6);
+    for(const [r,c] of body) put(r,c,br);
+    for(const [r,c] of eyes) put(r,c,shut?br:0);   // 眨眼时眼睛被白色填平
+    const wave=.05*Math.sin(t*1.7);
+    put(5,0,Math.max(0,br+wave));                   // 两只钳子轻轻交替
+    put(5,5,Math.max(0,br-wave));
+    return g;
+  }
+  if(agent==="codex"){
+    const body=compCells(COMP_ROWS.codex,"b");
+    const prompt=compCells(COMP_ROWS.codex,"p");
+    const cursor=blink(1.25,.34,.6);
+    for(const [r,c] of body) put(r,c,br);
+    for(const [r,c] of prompt) put(r,c,cursor?br:0); // >_ 像终端光标那样闪
+    return g;
+  }
+  if(agent==="opencode"){
+    for(const [r,c] of COMP_FRAME) put(r,c,br);
+    const fade=Math.min(1,t/.55);
+    const ip=(r,c,b)=>put(r,c,Math.max(0,b*fade));
+    const mode=look||"scan";
+    if(mode==="door"){
+      const open=.5+.5*Math.sin(t*.9);
+      const half=open>.55?1:0;
+      for(let r=1;r<5;r++) for(let c=2-half;c<=3+half;c++) ip(r,c,.10+.12*open);
+    } else if(mode==="stream"){
+      for(let i=0;i<3;i++){
+        const row=1+Math.floor((t*(1.0+i*.3)+i*1.7)%4);
+        const col=[1,3,4][i];
+        ip(row,col,.45);
+        if(row>1) ip(row-1,col,.16);
+      }
+    } else if(mode==="beat"){
+      const ph=t%4;
+      const beat=Math.exp(-Math.pow((ph-.2)/.12,2))
+               + .7*Math.exp(-Math.pow((ph-.5)/.12,2));
+      const b=.10+.55*Math.min(1,beat);
+      for(const [r,c] of [[2,2],[2,3],[3,2],[3,3]]) ip(r,c,b);
+    } else {
+      const sweep=2.3, ph=t%3.2;
+      if(ph<sweep){
+        const head=1+Math.min(3,Math.floor(ph/sweep*4));
+        [.55,.30,.14].forEach((b,d)=>{
+          const r=head-d;
+          if(r>=1&&r<=4) for(let c=1;c<5;c++) ip(r,c,b);
+        });
+      }
+    }
+    return g;
+  }
+  if(agent==="trae"){
+    const holes=new Set(COMP_TRAE_HOLES.map(([r,c])=>r+","+c));
+    const shut=blink(5.6,.30,2.8);
+    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+      const eye=(r===1||r===2)&&(c===1||c===4);
+      if(holes.has(r+","+c)){ put(r,c,eye&&shut?br:0); continue; }
+      put(r,c,br);
+    }
+    return g;
+  }
+  const body=compCells(COMP_ROWS.generic,"b");
+  const prompt=compCells(COMP_ROWS.generic,"p");
+  const cursor=blink(1.25,.34,.6);
+  for(const [r,c] of body) put(r,c,br);
+  for(const [r,c] of prompt) put(r,c,cursor?br:0);
+  return g;
+}
+
+function companionFrame(agent,state,t,idleLook){
+  t=t||0;
+  if(state==="idle") return idleFrame(agent,t,idleLook);
+  const g=blank();
+  const idle=state==="idle";
+  const base=idle?[255,255,255]:(COMP_COL[state]||[255,255,255]);
+  const br=compBase(state,t);
+  const accent=idle?[0,0,0]:[255,255,255];
+  const accentBr=idle?0:.9;
+  const put=(r,c,col,b)=>compPut(g,r,c,col,b);
+  const mix=(col,k)=>compMix(col,[255,255,255],k);
+  const ripple=(r,c)=>compRipple(r,c,t);
+
+  if(agent==="opencode"){
+    if(state==="busy"){
+      const s=Math.floor((t*2.2)%6);
+      for(const [r,c] of COMP_FRAME) put(r,c,base,r===s?1:.42);
+      for(const [r,c] of COMP_INNER) if(r===s) put(r,c,base,.32);
+      return g;
+    }
+    if(state==="done"){
+      const fill=Math.min(1,t/.75);
+      for(const [r,c] of COMP_FRAME) put(r,c,base,.50+.35*Math.exp(-t*2));
+      for(const [r,c] of COMP_INNER) if((5-r)/4<=fill) put(r,c,base,.85);
+      return g;
+    }
+    if(state==="error"){
+      const on=Math.sin(t*2*Math.PI*4)>0;
+      for(const [r,c] of COMP_FRAME) put(r,c,base,on?.95:.18);
+      if(on) for(const [r,c] of COMP_INNER) put(r,c,base,.55);
+      return g;
+    }
+    for(const [r,c] of COMP_FRAME) put(r,c,base,br);
+    return g;
+  }
+
+  if(agent==="trae"){
+    const holes=new Set(COMP_TRAE_HOLES.map(([r,c])=>r+","+c));
+    if(state==="done"){
+      holes.delete("1,4"); holes.delete("2,4");
+      holes.add("4,2"); holes.add("4,3");
+    } else if(state==="error"){
+      holes.add("4,1"); holes.add("4,2"); holes.add("4,3"); holes.add("4,4");
+    } else if(state==="busy"||state==="wait"||state==="ask"){
+      const period=state==="busy"?2.4:1.1;
+      if((t%period)<.12){
+        holes.delete("1,1"); holes.delete("2,1");
+        holes.delete("1,4"); holes.delete("2,4");
+      }
+    }
+    for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+      if(holes.has(r+","+c)) continue;
+      let col=base, b=br;
+      if(state==="busy") b=br+.06*Math.sin(t*2+c*.35);
+      if(state==="done"){
+        const rip=ripple(r,c);
+        b=br+.35*rip; col=mix(col,.30*rip);
+      }
+      if(state==="error") b=compBase("error",t);
+      put(r,c,col,b);
+    }
+    return g;
+  }
+
+  const rows=agent==="claude-code"?COMP_ROWS.claude:
+             agent==="codex"?COMP_ROWS.codex:COMP_ROWS.generic;
+  const body=compCells(rows,"b");
+  const accents=compCells(rows,"ep");
+  const isCodex=agent==="codex";
+
+  for(const [r,c] of body){
+    let col=base, b=br;
+    if(state==="busy"){
+      if(isCodex) b=.52+.48*compWave(r,c,t);
+      else b=.52+.20*Math.sin(t*2.2+r*.9+c*.35);
+    } else if(state==="done"){
+      const rip=ripple(r,c);
+      b=br+.45*rip; col=mix(col,.22*rip);
+    } else if(state==="error"){
+      b=compBase("error",t);
+    }
+    put(r,c,col,b);
+  }
+  let wb=accentBr;
+  if(!idle){
+    if(state==="wait") wb=pulseAt(t*1.5,.18,.16)>.2?.9:.42;
+    else if(state==="ask") wb=triplePulse(t*1.6)>.2?.9:.42;
+    else if(state==="busy"&&isCodex) wb=.72;
+    else if(state==="error") wb=compBase("error",t)>.5?.9:.25;
+    else if(state==="done") wb=.9;
+  }
+  for(const [r,c] of accents) put(r,c,accent,wb);
+  return g;
+}
+
+function compAgentLabel(a){
+  return COMP_LABEL[a] || (a && a!=="unknown" ? a : "Coding 伴侣");
+}
+function compCmp(a,b){
+  return (ST_PRI[b.state]||0)-(ST_PRI[a.state]||0) || (b.at||0)-(a.at||0);
+}
+function compFocus(){
+  const now=Date.now();
+  if(compBurst && now>=compBurst.until) compBurst=null;
+  const active=SESSIONS.filter(sn=>{
+    const st=sn.state||"idle";
+    if(st==="idle") return false;
+    if(st==="done"||st==="error") return now-(sn.at||0)*1000<COMP_HOLD_MS;
+    return true;
+  });
+  if(active.length) return active.slice().sort(compCmp)[0];
+  if(compBurst && now<compBurst.until){
+    return Object.assign({}, compBurst.session, {until:compBurst.until});
+  }
+  const idle=SESSIONS.filter(sn=>(sn.state||"idle")==="idle")
+                     .sort((a,b)=>(b.at||0)-(a.at||0));
+  if(idle.length) return Object.assign({}, idle[0], {state:"idle"});
+  const any=SESSIONS.slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  if(any.length) return Object.assign({}, any[0], {state:"idle"});
+  return {key:"",sessionId:"",agent:"companion",state:"idle",name:"",msg:""};
+}
+function compMiniIcon(agent,state){
+  const box=document.createElement("div"); box.className="cico";
+  const rgb=companionFrame(agent,state,.12);
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){
+    const i=document.createElement("i");
+    const [R,G,B]=rgb[r][c];
+    if(R+G+B>12) i.style.background="rgb("+R+","+G+","+B+")";
+    box.appendChild(i);
+  }
+  return box;
+}
+
+function scheduleCompHold(){
+  if(compHoldTimer){clearTimeout(compHoldTimer);compHoldTimer=null;}
+  const f=compFocus();
+  if(!f) return;
+  let until=0;
+  if(f.until) until=f.until;
+  else if(f.state==="done"||f.state==="error"){
+    until=(f.at||0)*1000+COMP_HOLD_MS;
+  }
+  if(!until) return;
+  compHoldTimer=setTimeout(()=>{
+    compSig=null;
+    companionPaint();
+    renderCompanionList();
+  }, Math.max(80, until-Date.now()+80));
+}
+/* 只改键盘背光，不碰小屏。伴侣模式换灯效/亮度时用。 */
+async function applyKeyboardOnly(){
+  if(!dev) return;
+  try{
+    if(KB_OFF){
+      await patchConfig({blMode:0});
+      streamOn=0;
+      drawKeyboard(new Array(KB_N).fill([0,0,0]));
+      return;
+    }
+    if(FW_FX!=null){
+      await patchConfig({blMode:FW_FX, blBright:90, blColorful:1});
+      streamOn=FW_FX;
+      drawKeyboard(THEMES[THEME].kb(0));
+      return;
+    }
+    if(!await enterStreamMode()) return;
+    await pushThemeKeys(THEMES[THEME]);
+  }catch(e){
+    lastErr=String(e&&e.message||e).slice(0,120);
+  }
+}
+/* 点阵屏是唯一会动的东西；键盘完全由当前主题/灯效设置决定。 */
+function companionPaint(){
+  if(MODE!=="companion"||!dev){ compSig=null; return; }
+  const f=compFocus();
+  const st=f.state||"idle";
+  const agent=f.agent||"companion";
+  const idleOn=st==="idle"&&IDLE_LOOK!=="auto";
+  const drawAgent=idleOn?IDLE_LOOK.split(":")[0]:agent;
+  const drawLook=idleOn?(IDLE_LOOK.split(":")[1]||""):"";
+  const sig=[drawAgent,st,f.sessionId||f.key||"",THEME,st==="idle"?IDLE_LOOK:""].join("|");
+  if(sig===compSig){ scheduleCompHold(); return; }
+  if(compStop){compStop();compStop=null;}
+  if(compHoldTimer){clearTimeout(compHoldTimer);compHoldTimer=null;}
+  compSig=sig;
+  renderCompanionTop();
+  const fps=st==="idle"?4:8;
+  let stopped=false,busy=false; const t0=performance.now();
+  const tick=async()=>{ if(stopped)return;
+    if(MODE!=="companion"||!dev){ stopped=true; return; }
+    if(!busy){ busy=true;
+      try{ await pushMatrix(companionFrame(drawAgent,st,(performance.now()-t0)/1000,drawLook)); }catch(e){}
+      busy=false; }
+    if(!stopped) setTimeout(tick,1000/fps); };
+  tick();
+  compStop=()=>{stopped=true;};
+  scheduleCompHold();
+}
+
+function renderCompanionTop(){
+  const box=$("cTop"); if(!box) return;
+  const f=compFocus();
+  const st=f.state||"idle";
+  const agent=f.agent||"companion";
+  const shown=(st==="idle"&&IDLE_LOOK!=="auto")?IDLE_LOOK.split(":")[0]:agent;
+  const label=compAgentLabel(shown);
+  const name=f.name||f.project||f.key||"";
+  const msg=f.msg||"";
+  const pending=f.pending?("待处理 "+f.pending):"";
+  const idleNote=(st==="idle"&&IDLE_LOOK!=="auto")?"空闲展示":"";
+  const hold=(f.until||st==="done"||st==="error") && st!=="idle";
+  box.innerHTML=
+    '<div class="st"><span class="dot" style="color:'+ST_CSS[st]+';background:currentColor"></span>'+
+    '<span>小屏：'+esc(label)+'</span>'+
+    '<span class="pill" style="color:'+ST_CSS[st]+'">'+esc(ST_TXT[st]||st)+'</span>'+
+    (hold?'<span style="font-size:11.5px;color:var(--dim2);font-weight:400">演完退回空闲</span>':'')+
+    '</div><div class="meta">'+
+    [name&&esc(name),idleNote&&esc(idleNote),msg&&esc(String(msg).slice(0,100)),pending&&esc(pending)]
+      .filter(Boolean).join("   ·   ")+
+    (name||idleNote||msg||pending?'':'等第一条标准事件，或点上面的模拟按钮。')+'</div>';
+}
+function renderCompanionList(){
+  const box=$("cSessions"); if(!box) return;
+  renderCompanionTop();
+  box.innerHTML="";
+  if(!SESSIONS.length){
+    box.innerHTML='<div class="agent"><div class="st">还没有会话</div>'+
+      '<div class="meta">点「模拟四家工具」看四种形状和六种状态；接上适配器后这里会实时出现任务。</div></div>';
+    return;
+  }
+  const focus=compFocus();
+  const fk=focus?(focus.sessionId||focus.key):"";
+  SESSIONS.slice().sort(compCmp).forEach(sn=>{
+    const st=sn.state||"idle";
+    const agent=sn.agent||"claude-code";
+    const d=document.createElement("div");
+    d.className="agent compRow"+((fk&&fk===(sn.sessionId||sn.key))?" focus":"");
+    d.style.marginBottom="9px";
+    d.appendChild(compMiniIcon(agent,st));
+    const main=document.createElement("div"); main.className="compMain";
+    const name=sn.name||sn.project||sn.key||"未命名";
+    const bits=[];
+    if(sn.project&&sn.project!==name) bits.push(esc(sn.project));
+    if(sn.tool) bits.push("工具 "+esc(sn.tool));
+    if(sn.pending) bits.push("待处理 "+sn.pending);
+    if(sn.host) bits.push(esc(sn.host));
+    if(sn.cwd) bits.push(esc(String(sn.cwd).slice(0,60)));
+    if(sn.msg) bits.push(esc(String(sn.msg).slice(0,100)));
+    main.innerHTML='<div class="st"><span>'+esc(name)+'</span>'+
+      '<span class="pill" style="color:'+ST_CSS[st]+'">'+esc(ST_TXT[st]||st)+'</span>'+
+      '<span style="font-size:11px;color:var(--dim2);font-weight:400">'+esc(compAgentLabel(agent))+'</span></div>'+
+      '<div class="meta">'+bits.join("   ·   ")+'</div>';
+    d.appendChild(main);
+    box.appendChild(d);
+  });
+}
+
+(function buildCompanionLegend(){
+  const box=$("cLegend"); if(!box) return;
+  COMP_TOOLS.forEach(([agent,label])=>{
+    const d=document.createElement("div"); d.className="chip";
+    const row=document.createElement("div"); row.className="cmini";
+    row.appendChild(compMiniIcon(agent,"idle"));
+    const s=document.createElement("span"); s.textContent=label;
+    row.appendChild(s); d.appendChild(row); box.appendChild(d);
+  });
+  COMP_STATES.forEach(([st,label])=>{
+    const d=document.createElement("div"); d.className="chip";
+    const row=document.createElement("div"); row.className="cmini";
+    const dot=document.createElement("span");
+    dot.style.cssText="width:10px;height:10px;border-radius:50%;background:"+
+      (st==="idle"?"#ffffff":ST_CSS[st]);
+    const s=document.createElement("span"); s.textContent=label;
+    row.appendChild(dot); row.appendChild(s); d.appendChild(row); box.appendChild(d);
+  });
+})();
+
+const compSleep=ms=>new Promise(r=>setTimeout(r,ms));
+function compUid(){
+  try{ return crypto.randomUUID(); }
+  catch(e){ return "c-"+Date.now()+"-"+Math.random().toString(16).slice(2); }
+}
+async function companionSend(event,sid,agent,extra){
+  const body=Object.assign({schema:"yogo.companion.v1",event,sessionId:sid,
+    eventId:compUid(),occurredAt:Date.now(),agent},extra||{});
+  const r=await fetch("/events",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||d.ok===false) throw new Error(d.why||("HTTP "+r.status));
+  return d;
+}
+let compSimBusy=false;
+$("cSim") && $("cSim").addEventListener("click", async()=>{
+  if(compSimBusy) return;
+  compSimBusy=true;
+  const btn=$("cSim"), note=$("cSimNote"), clear=$("cClear");
+  if(btn) btn.disabled=true;
+  if(clear) clear.disabled=true;
+  const say=txt=>{ if(note) note.textContent=txt; };
+  const run=compUid().slice(0,8);
+  const tools=[
+    {sid:"demo-claude", agent:"claude-code", name:"Claude Code", project:"yogodot"},
+    {sid:"demo-codex", agent:"codex", name:"Codex", project:"api"},
+    {sid:"demo-opencode", agent:"opencode", name:"OpenCode", project:"web"},
+    {sid:"demo-trae", agent:"trae", name:"TRAE", project:"docs"}
+  ];
+  const turn={}; tools.forEach(t=>turn[t.sid]="demo-"+run+"-"+t.sid);
+  try{
+    say("演示：创建四个会话");
+    for(const t of tools){
+      await companionSend("session_started",t.sid,t.agent,
+        {turnId:turn[t.sid],data:{name:t.name,project:t.project,message:"已连接"}});
+      await compSleep(900);
+    }
+    say("演示：逐个显示白色空闲图标");
+    for(const t of tools){
+      await companionSend("session_started",t.sid,t.agent,
+        {turnId:turn[t.sid],data:{name:t.name,project:t.project,message:"已连接"}});
+      await compSleep(1100);
+    }
+    say("演示：四个任务开始执行（蓝）");
+    for(const t of tools){
+      await companionSend("user_message_submitted",t.sid,t.agent,
+        {turnId:turn[t.sid],data:{message:"开始处理"}});
+      await compSleep(500);
+    }
+    await compSleep(1600);
+    say("演示：Codex 等你授权（琥珀）");
+    await companionSend("approval_requested","demo-codex","codex",
+      {turnId:turn["demo-codex"],
+       interaction:{requestId:"demo-"+run+"-codex",tool:"Bash"},
+       data:{message:"等待授权：Bash"}});
+    await compSleep(2600);
+    say("演示：TRAE 等你补充（紫，同级最近优先）");
+    await companionSend("supplement_requested","demo-trae","trae",
+      {turnId:turn["demo-trae"],interaction:{requestId:"demo-"+run+"-trae"},
+       data:{message:"请选择目标分支"}});
+    await compSleep(2600);
+    say("演示：OpenCode 完成（绿，琥珀/紫仍在等你）");
+    await companionSend("turn_completed","demo-opencode","opencode",
+      {turnId:turn["demo-opencode"],outcome:"completed",data:{message:"改完了"}});
+    await compSleep(2000);
+    say("演示：TRAE 继续执行，Codex 仍在等你");
+    await companionSend("processing_resumed","demo-trae","trae",
+      {turnId:turn["demo-trae"],interaction:{requestId:"demo-"+run+"-trae"},
+       data:{message:"继续执行"}});
+    await compSleep(2000);
+    say("演示：Codex 完成");
+    await companionSend("turn_completed","demo-codex","codex",
+      {turnId:turn["demo-codex"],outcome:"completed",data:{message:"完成"}});
+    await compSleep(2000);
+    say("演示：Claude 出错（红，硬闪 6 秒）");
+    await companionSend("turn_completed","demo-claude","claude-code",
+      {turnId:turn["demo-claude"],outcome:"failed",data:{message:"测试失败"}});
+    await compSleep(2200);
+    say("演示：TRAE 完成，等红色演完");
+    await companionSend("turn_completed","demo-trae","trae",
+      {turnId:turn["demo-trae"],outcome:"completed",data:{message:"完成"}});
+    await compSleep(2500);
+    say("演示：主动清理四个会话");
+    for(const t of tools){
+      await companionSend("session_ended",t.sid,t.agent,{});
+      await compSleep(500);
+    }
+    compBurst=null;
+    say("演示完成；会话已清理");
+  }catch(e){
+    say("演示失败："+String(e&&e.message||e).slice(0,120));
+  }finally{
+    compSimBusy=false;
+    if(btn) btn.disabled=false;
+    if(clear) clear.disabled=false;
+  }
+});
+$("cClear") && $("cClear").addEventListener("click", async()=>{
+  if(compSimBusy) return;
+  if(!confirm("清空所有会话？点阵屏会回到空闲白色。")) return;
+  try{
+    const r=await fetch("/sessions/clear",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({all:true})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.ok===false) throw new Error(d.why||("HTTP "+r.status));
+    compBurst=null; SESSIONS=[]; lastSeen={};
+    renderCompanionList(); renderSessionList(); companionPaint();
+    const note=$("cSimNote"); if(note) note.textContent="已清空 "+d.removed+" 个会话";
+  }catch(e){
+    const note=$("cSimNote");
+    if(note) note.textContent="清理失败："+String(e&&e.message||e).slice(0,120);
+  }
+});
 function esc(x){ return String(x==null?"":x).replace(/[<>&"]/g, m=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[m])); }
 function renderSessionList(){
   const box=$("vSessions"); box.innerHTML="";
@@ -2542,19 +3293,43 @@ function maybeAlert(sn){
 }
 
 function applySnapshot(snap){
+  const before=new Map();
+  SESSIONS.forEach(sn=>before.set(sn.key||sn.sessionId, Object.assign({},sn)));
   SESSIONS=(snap.sessions||[]).slice().sort(
-    (a,b)=>(ST_PRI[b.state]||0)-(ST_PRI[a.state]||0) || String(a.key).localeCompare(String(b.key)));
+    (a,b)=>(ST_PRI[b.state]||0)-(ST_PRI[a.state]||0) ||
+           (b.at||0)-(a.at||0) ||
+           String(a.key).localeCompare(String(b.key)));
+  /* 会话被 session_ended / 手动清理移除时，补演最后一帧。
+     Stop 和 SessionEnd 常常前后脚到，前端可能只看到「列表里没了」，
+     看不到 done 快照；这里保证完成/出错仍有 6 秒反馈。 */
+  const nowMs=Date.now(), afterKeys=new Set(SESSIONS.map(sn=>sn.key||sn.sessionId));
+  before.forEach((sn,key)=>{
+    if(afterKeys.has(key)) return;
+    const st=sn.state||"idle";
+    if(st==="idle") return;
+    if(nowMs-(sn.at||0)*1000 > 60000) return;
+    const endState=(st==="done"||st==="error")?st:"done";
+    compBurst={session:Object.assign({},sn,{state:endState,msg:"已结束"}),
+               until:nowMs+COMP_HOLD_MS};
+  });
   renderSessionList();
-  /* 只有【状态跳变到 完成/等你/出错】才算事件。busy 和 idle 一律安静 */
+  /* 只有【状态跳变到 完成/补充/等你/出错】才算事件。busy 和 idle 一律安静 */
   SESSIONS.forEach(sn=>{
     if(lastSeen[sn.key]===sn.state) return;
     lastSeen[sn.key]=sn.state;
-    if(sn.state==="done"||sn.state==="wait"||sn.state==="error"){
+    if((sn.state==="done"||sn.state==="error") &&
+       Date.now()-(sn.at||0)*1000 < COMP_HOLD_MS){
+      /* 服务端可能紧跟着 session_ended 就把会话删了；本地留一份演完 6 秒 */
+      compBurst={session:Object.assign({},sn), until:Date.now()+COMP_HOLD_MS};
+    }
+    if(sn.state==="done"||sn.state==="wait"||sn.state==="ask"||sn.state==="error"){
       notify(sn);
       maybeAlert(sn);
     }
   });
+  renderCompanionList();
   vibePaint();
+  companionPaint();
 }
 function syncAlert(){
   $("vAlert").textContent = "有事弹胶囊：" + (ALERT_ON ? "开" : "关");
@@ -2588,6 +3363,7 @@ $("vTest").addEventListener("click", async()=>{
   es.onerror=()=>{ es.close(); setTimeout(connectSSE, 3000); };
 })();
 renderSessionList();
+renderCompanionList();
 function handleAction(a){                    // 键盘扩展键触发
   if(a==="pomodoro"){ $("pstart").click(); }
   else if(a==="ack"){                                   // 「我看到了」：把等待态清成执行中

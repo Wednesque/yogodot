@@ -127,8 +127,10 @@ def numfont(px, text):
     return font(px, mono=all(ord(c) < 128 for c in str(text)))
 
 
-ST_TXT = {"idle": "空闲", "busy": "执行中", "wait": "等你", "done": "完成", "error": "出错"}
-PRI = {"wait": 4, "error": 3, "busy": 2, "done": 1, "idle": 0}
+ST_TXT = {"idle": "空闲", "busy": "执行中", "wait": "等你", "ask": "补充",
+          "done": "完成", "error": "出错"}
+PRI = {"wait": 5, "ask": 5, "error": 4, "busy": 3, "done": 2, "idle": 1}
+ASK_COL = (155, 124, 255)
 
 # ── 电子宠物：#=身体 w=白 p=瞳孔 y=点缀色 ────────────────────────────
 PETS = {
@@ -572,10 +574,12 @@ class Renderer:
             d.text((x, ry), "没有会话", font=font(self.px(10)), fill=sk["ink3"])
             return
         for s in rows:
-            name = "本机" if s.get("key") in ("local", "claude") else flat(s.get("key", ""))
+            raw_name = s.get("name") or s.get("key") or ""
+            name = "本机" if s.get("key") in ("local", "claude") else flat(raw_name)
             state = s.get("state", "idle")
             scol = {"idle": sk["ink3"], "busy": sk["info"], "wait": sk["warn"],
-                    "done": sk["ok"], "error": sk["bad"]}[state]
+                    "ask": ASK_COL, "done": sk["ok"],
+                    "error": sk["bad"]}.get(state, sk["ink3"])
             d.ellipse([x, ry + self.px(4), x + self.px(5), ry + self.px(9)], fill=scol)
             cx = x + self.px(11)
             f = font(self.px(10.5), bold=True)
@@ -611,12 +615,13 @@ class Renderer:
                     px0, py0 = x + rx * k, y + (ry + bob) * k
                     d.rectangle([px0, py0, px0 + k - 1, py0 + k - 1], fill=c)
         mark = {"wait": [(14, 0), (14, 1), (14, 3)],
+                "ask": [(13, 0), (14, 0), (15, 0), (14, 1), (14, 2)],
                 "error": [(13, 0), (15, 0), (14, 1), (13, 2), (15, 2)],
                 "done": [(13, 2), (14, 3), (15, 1), (16, 0)],
                 "busy": [(13, 1), (14, 1), (15, 1)]}.get(state)
         if mark:
-            bc = {"wait": sk["warn"], "error": sk["bad"], "done": sk["ok"],
-                  "busy": sk["info"]}[state]
+            bc = {"wait": sk["warn"], "ask": ASK_COL, "error": sk["bad"], "done": sk["ok"],
+                  "busy": sk["info"]}.get(state, sk["info"])
             lim = (phase // 6) % 3 if state == "busy" else 99
             for i, (mx, my) in enumerate(mark):
                 if i > lim:

@@ -37,15 +37,17 @@
 - **24 套主题**:一张小屏图案 + 一套 84 键配色,成套切换。颜色按这把键盘的灯珠调过,不会发白
 - **会动的主题**:小屏和背光一起动(为了省电,刷新得比较慢)
 - **番茄钟**:小屏画一圈进度,到点背光闪一下提醒
+- **Coding 伴侣**:Claude Code / Codex / TRAE / OpenCode 的任务状态上小屏,形状认工具、颜色认状态;键盘保持当前灯效,只有小屏动
 - **专注模式**:一键全灭
 - **省电**:Win+L 锁屏几秒内全灭、离开 3 分钟自动熄;电量低于 20% 关背光,低于 8% 小屏也关,插上电自动恢复
 - **电量**:软件里直接显示电量和是否在充电
+- **固件动画**(默认关):打开后点阵/背光交给键盘内置效果,主机不再持续占用 2.4G;关着时保留原来的逐帧自定义动画
 - 托盘常驻,可以开机自启,没有黑框
 
 ## 常见问题
 
 **会不会弄坏键盘?**
-不会。不刷固件、不改按键。画面是实时发给键盘的,不存进键盘里;只有切换背光模式时会改一次键盘设置,跟官方驱动一样。想回到出厂状态,用官方 ATK HUB 的「恢复出厂」。
+不会。不刷固件、不改按键。点阵自定义图是实时发给键盘的，不存进键盘里；逐键配色会写进键盘的**自定义灯效缓冲区**（模式 253），切主题只写一次（VIA 缓冲区只在 USB 有线连接下开放；2.4G 下自动回退逐帧推流）。打开「固件动画」后，点阵和背光由键盘内置效果自己跑，主机不持续占用 2.4G。想回到出厂状态，用官方 ATK HUB 的「恢复出厂」。
 
 **要联网吗?**
 不用,默认完全离线。只有你手动打开「Claude 模式」(见下文,给程序员的),才会读取电脑上 Claude Code 的登录信息去查用量。
@@ -70,7 +72,7 @@
 - 只有 Windows 版;只在 YOGO 75 PRO 上测过(同厂别的带像素屏的型号可能也行,欢迎试完开 issue)
 - 蓝牙连接无法控制
 - 用「原厂灯效」(键盘自带的那些效果)时,锁屏 / 离开 / 低电量不会自动关背光 —— 那些灯是键盘自己在跑。用我们的主题配色或「熄灭键盘灯」不受影响
-- 画面不存进键盘,所以软件要在后台开着
+- 点阵画面不存进键盘,所以软件要在后台开着
 
 ## Claude 模式(给程序员,默认关闭)
 
@@ -106,6 +108,22 @@
 
 hook 全部是 `async`、永远 `exit 0`,只往服务器本地文件追加一行,不参与任何权限决策,不会拖慢 Claude。
 
+## Coding 伴侣(Claude Code / Codex / TRAE / OpenCode)
+
+顶栏选「Coding 伴侣」,6×6 小屏用**形状认工具、颜色认状态**:
+
+- 形状:Claude Code = 方块螃蟹,Codex = 圆角云 + `>_`,OpenCode = 竖门,TRAE = 带眼洞的脸
+- 颜色:白 = 空闲,蓝 = 执行中,琥珀 = 等你授权,紫 = 等你补充,绿 = 完成,红 = 出错
+- 键盘保持当前灯效不变;只有小屏按 8 帧/秒动;伴侣面板里可以单独换键盘灯效
+- 完成 / 出错演 6 秒后退回白色空闲
+- 等你授权和等你补充同级,最近的优先;其余按 出错 > 执行中 > 完成 > 空闲
+- 控制台里的「模拟四家工具」可以先用假事件看完整灯语,再接真实工具
+
+事件统一走本机 `POST /events`,适配器和安装说明在
+[remote/companion/README.md](remote/companion/README.md)。适配器只发送状态元数据,
+**不提取、不发送** prompt、模型回答、工具输入输出;服务端 `session_ended` 主动清会话,也可以手动清空。
+不开 Claude 模式也能用 Coding 伴侣;胶囊和额度仍然只属于 Claude 模式。
+
 ## 开发者
 
 ### 从源码运行
@@ -118,13 +136,13 @@ pip install -r requirements.txt
 
 ### 它是怎么工作的
 
-- `kbd.py`:用 Windows HID API(`setupapi` / `hid.dll`,纯 ctypes)直接跟键盘的厂商通道通信。去重、限速、限速时尾沿补发、电量读取、锁屏 / 离开 / 低电量熄灯都在这一层,上层出 bug 也刷不爆设备
+- `kbd.py`:用 Windows HID API(`setupapi` / `hid.dll`,纯 ctypes)直接跟键盘的厂商通道通信。整帧原子发送、去重、限速、限速时尾沿补发、打字时让路、电量读取、锁屏 / 离开 / 低电量熄灯都在这一层,上层出 bug 也刷不爆设备。逐键配色优先写 VIA 自定义灯效缓冲区,点阵可切固件内置效果
 - `server.py`:本地 HTTP 服务(127.0.0.1:8787),控制台页面只是遥控器
 - `yogo.html`:控制台界面,主题 / 图案 / 动画 / 番茄钟的逻辑目前在这页的 JS 里,由托盘程序用隐藏的 Chrome / Edge 窗口跑着
 - `hud.py` + `capsule.py`:Claude 模式的胶囊,PIL 渲染 + Windows 分层窗口
 - `paths.py`:打包后只读资源在临时解压目录,可写数据在 exe 旁边
 
-协议来自官方网页版 ATK HUB 的前端代码。像素屏用 `set_dotscreen_matrix`(cmd 59),背光用 `open_sync_led`(cmd 46),都是实时推送,键盘重新上电后不保留(实测行为);切换背光模式时会用 cmd 21 写一次键盘配置。电量是 `power_info`(cmd 48)。
+协议来自官方 Web HUB 3.2.28 的前端代码。像素屏自定义图用 `set_dotscreen_matrix`(cmd 59)实时推送,键盘重新上电后不保留;点阵内置动画用配置字节 30=0–12,由固件自己播放,零持续流量。逐键配色优先走 VIA 的自定义灯效缓冲区(cmd 8/69 读、7/66 写、3/150/18 保存)+ 模式 253,切主题只写一次;该通道只在 USB 有线连接下开放,2.4G 下自动回退到 `open_sync_led`(cmd 46)逐帧推流。进/出自定义点阵前后会发 `end_sync_dot`(cmd 61)。电量是 `power_info`(cmd 48)。
 
 ⚠️ 命令表里 `reset_device`(cmd 49,恢复出厂)就夹在常用号段中间。**探协议时千万不要盲扫命令号。**
 
@@ -141,7 +159,7 @@ pip install -r requirements.txt
 
 ## English
 
-YogoDot controls the 6×6 pixel screen and per-key RGB backlight of the **ATK YOGO 75 PRO** keyboard — an alternative to the official ATK HUB driver. 48 pixel-art images, 24 themes (backlight + screen), animations, pomodoro, auto-off on lock / idle / low battery, battery display. Windows only, no install: [download the zip](https://github.com/Wednesque/yogodot/releases/latest/download/YogoDot-windows.zip), unzip, run `YogoDot.exe`. Works over the 2.4G dongle or USB cable, not Bluetooth (firmware limitation). Offline by default; the optional "Claude mode" shows Claude Code usage and session state on a desktop capsule and as a pet on the screen.
+YogoDot controls the 6×6 pixel screen and per-key RGB backlight of the **ATK YOGO 75 PRO** keyboard — an alternative to the official ATK HUB driver. 48 pixel-art images, 24 themes (backlight + screen), animations, pomodoro, auto-off on lock / idle / low battery, battery display. Windows only, no install: [download the zip](https://github.com/Wednesque/yogodot/releases/latest/download/YogoDot-windows.zip), unzip, run `YogoDot.exe`. Works over the 2.4G dongle or USB cable, not Bluetooth (firmware limitation). Offline by default; the optional "Claude mode" shows Claude Code usage and session state on a desktop capsule, and the **Coding companion** mode turns the screen into a tool/state light for Claude Code, Codex, TRAE and OpenCode (shape = tool, color = state, keyboard stays on the current theme).
 
 ## 许可
 

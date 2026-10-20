@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source trae",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

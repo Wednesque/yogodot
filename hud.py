@@ -28,6 +28,7 @@ import urllib.request
 import winreg
 
 import capsule
+import kbd
 import paths
 
 W, H = 470, 120              # 胶囊本体尺寸（DIP）—— 不是通栏横条，是一块悬浮方块
@@ -66,6 +67,8 @@ ULW_ALPHA, AC_SRC_OVER, AC_SRC_ALPHA = 0x02, 0x00, 0x01
 BI_RGB, DIB_RGB_COLORS = 0, 0
 WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE = 0x0002, 0x0202, 0x0200
 WH_MOUSE_LL = 14
+WH_KEYBOARD_LL = 13
+WM_KEYDOWN, WM_SYSKEYDOWN = 0x0100, 0x0104
 WM_MBUTTONDOWN, WM_MBUTTONUP = 0x0207, 0x0208
 # 锁屏 / 解锁的系统通知。注册到胶囊窗口上，收到就告诉 kbd 去熄屏 / 恢复。
 WM_WTSSESSION_CHANGE = 0x02B1
@@ -627,6 +630,27 @@ def _proc(nCode, wParam, lParam):
 _hook_ref = HOOKPROC(_proc)          # 必须留引用，否则被 GC 掉钩子就废了
 
 
+# ── 低层键盘钩子：只记时间戳，给 kbd 的打字保护用 ──────────────────
+def _key_proc(nCode, wParam, lParam):
+    try:
+        if nCode == 0 and wParam in (WM_KEYDOWN, WM_SYSKEYDOWN):
+            kbd.note_key()            # 不看键值、不拦按键，只更新时间戳
+    except Exception:
+        pass
+    return user32.CallNextHookEx(None, nCode, wParam, lParam)
+
+
+_key_ref = HOOKPROC(_key_proc)
+
+
+def install_keyboard_hook():
+    kh = user32.SetWindowsHookExW(WH_KEYBOARD_LL, _key_ref, None, 0)
+    if not kh:
+        print("!! 键盘钩子注册失败，错误码", ctypes.get_last_error())
+        return None
+    return kh
+
+
 def create_window():
     HUD.create()
 
@@ -650,6 +674,7 @@ def main():
     hh = install_hook()
     if not hh:
         return
+    kh = install_keyboard_hook()
     print("   按【鼠标中键】唤出 / 收起；点胶囊打开控制台")
     msg = wt.MSG()
     try:
@@ -659,6 +684,8 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        if kh:
+            user32.UnhookWindowsHookEx(kh)
         user32.UnhookWindowsHookEx(hh)
 
 

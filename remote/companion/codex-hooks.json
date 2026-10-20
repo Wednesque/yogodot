@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source codex --hook-event-name UserPromptSubmit",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source codex --hook-event-name PermissionRequest",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source codex --hook-event-name PreToolUse",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source codex --hook-event-name PostToolUse",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "D:/Projects/yogodot/remote/companion-hook.cmd --source codex --hook-event-name Stop",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}
